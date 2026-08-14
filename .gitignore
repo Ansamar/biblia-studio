@@ -19,3 +19,6 @@ giudici-riparazione-preview.txt
 
 # Sanity runtime generato
 .sanity/
+
+# Report locali di validazione
+*-validazione.json
