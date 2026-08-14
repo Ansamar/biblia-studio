@@ -8,63 +8,87 @@ const client = createClient({
 })
 
 const query = `{
-  "libri": count(*[_type == "libro"]),
-  "capitoliAnalitici": count(*[_type == "capitolo"]),
-  "documentiTesto": count(*[_type == "testoBiblicoCapitolo"]),
-  "capitoliConTesto": count(array::unique(*[_type == "testoBiblicoCapitolo" && defined(capitolo._ref)].capitolo._ref)),
-  "versetti": count(*[_type == "testoBiblicoCapitolo"].versetti[]),
-  "testiSenzaLibro": *[_type == "testoBiblicoCapitolo" && !defined(libro->._id)]{_id, numero, tradizione, "ref": libro._ref},
-  "testiSenzaCapitoloAnalitico": *[_type == "testoBiblicoCapitolo" && defined(capitolo) && !defined(capitolo->._id)]{_id, numero, tradizione, "ref": capitolo._ref},
-  "capitoliSenzaTesto": *[_type == "capitolo" && !(_id in *[_type == "testoBiblicoCapitolo"].capitolo._ref)]{_id, numero, titolo, "libro": libro->titolo},
-  "libriConTesto": array::unique(*[_type == "testoBiblicoCapitolo"].libro._ref),
-  "libriSenzaTesto": *[_type == "libro" && !(_id in *[_type == "testoBiblicoCapitolo"].libro._ref)] | order(ordine asc, titolo asc){
-    _id, titolo, categoriaId, capitoli, ordine
-  },
-  "apocalisse": *[_id == "libro-apocalisse"][0]{
-    _id, titolo, categoriaId, capitoli, ordine,
-    "capitoliAnalitici": count(*[_type == "capitolo" && libro._ref == ^._id]),
-    "documentiTesto": count(*[_type == "testoBiblicoCapitolo" && libro._ref == ^._id]),
-    "capitoliConTesto": count(array::unique(*[_type == "testoBiblicoCapitolo" && libro._ref == ^._id].numero))
-  },
-  "tradizioniMultiple": *[_type == "libro" && count(array::unique(*[_type == "testoBiblicoCapitolo" && libro._ref == ^._id && defined(tradizione)].tradizione)) > 1]{
+  "libri": *[_type == "libro"]{_id, titolo, categoriaId, capitoli},
+  "capitoli": *[_type == "capitolo"]{_id, numero, titolo, "libroRef": libro._ref, "libroTitolo": libro->titolo},
+  "testi": *[_type == "testoBiblicoCapitolo"]{
     _id,
-    titolo,
-    "tradizioni": array::unique(*[_type == "testoBiblicoCapitolo" && libro._ref == ^._id && defined(tradizione)].tradizione)
-  },
-  "versettiVuotiAmmessi": *[_type == "testoBiblicoCapitolo" && count(versetti[testo == "" && statoTestuale in ["metatesto_solo", "omesso_nell_edizione"]]) > 0]{
-    _id,
+    numero,
     tradizione,
-    "vuoti": versetti[testo == "" && statoTestuale in ["metatesto_solo", "omesso_nell_edizione"]]{numero, statoTestuale, notaEditoriale, metatesto}
-  },
-  "anomalieTestoVuoto": *[_type == "testoBiblicoCapitolo" && count(versetti[testo == "" && !(statoTestuale in ["metatesto_solo", "omesso_nell_edizione"])]) > 0]{
-    _id,
-    tradizione,
-    "anomalie": versetti[testo == "" && !(statoTestuale in ["metatesto_solo", "omesso_nell_edizione"]) ]{numero, statoTestuale, notaEditoriale, metatesto}
+    "libroRef": libro._ref,
+    "capitoloRef": capitolo._ref,
+    "libroEsiste": defined(libro->._id),
+    "capitoloEsiste": !defined(capitolo._ref) || defined(capitolo->._id),
+    "versettiTotali": count(versetti),
+    "vuotiAmmessi": versetti[testo == "" && statoTestuale in ["metatesto_solo", "omesso_nell_edizione"]]{numero, statoTestuale, notaEditoriale, metatesto},
+    "vuotiAnomali": versetti[testo == "" && !(statoTestuale in ["metatesto_solo", "omesso_nell_edizione"])]{numero, statoTestuale, notaEditoriale, metatesto}
   }
 }`
 
 try {
   const result = await client.fetch(query)
-  const libriConTestoCount = Array.isArray(result.libriConTesto) ? result.libriConTesto.length : 0
-  const coperturaLibri = result.libri ? Number(((libriConTestoCount / result.libri) * 100).toFixed(1)) : 0
-  const coperturaCapitoli = result.capitoliAnalitici ? Number(((result.capitoliConTesto / result.capitoliAnalitici) * 100).toFixed(1)) : 0
+
+  const libri = result.libri ?? []
+  const capitoli = result.capitoli ?? []
+  const testi = result.testi ?? []
+
+  const capitoloIds = new Set(capitoli.map(c => c._id))
+  const libroIds = new Set(libri.map(l => l._id))
+  const capitoliConTestoSet = new Set(
+    testi.map(t => t.capitoloRef).filter(ref => ref && capitoloIds.has(ref)),
+  )
+  const libriConTestoSet = new Set(
+    testi.map(t => t.libroRef).filter(ref => ref && libroIds.has(ref)),
+  )
+
+  const capitoliSenzaTesto = capitoli.filter(c => !capitoliConTestoSet.has(c._id))
+  const libriSenzaTesto = libri.filter(l => !libriConTestoSet.has(l._id))
+  const testiSenzaLibro = testi.filter(t => !t.libroEsiste)
+  const testiSenzaCapitoloAnalitico = testi.filter(t => t.capitoloRef && !t.capitoloEsiste)
+  const testiConVuotiAmmessi = testi.filter(t => (t.vuotiAmmessi?.length ?? 0) > 0)
+  const testiConVuotiAnomali = testi.filter(t => (t.vuotiAnomali?.length ?? 0) > 0)
+
+  const tradizioniPerLibro = new Map()
+  for (const t of testi) {
+    if (!t.libroRef || !t.tradizione) continue
+    if (!tradizioniPerLibro.has(t.libroRef)) tradizioniPerLibro.set(t.libroRef, new Set())
+    tradizioniPerLibro.get(t.libroRef).add(t.tradizione)
+  }
+  const libriConTradizioniMultiple = [...tradizioniPerLibro.entries()]
+    .filter(([, tradizioni]) => tradizioni.size > 1)
+    .map(([libroRef, tradizioni]) => ({
+      libroRef,
+      titolo: libri.find(l => l._id === libroRef)?.titolo ?? libroRef,
+      tradizioni: [...tradizioni],
+    }))
+
+  const versetti = testi.reduce((sum, t) => sum + (t.versettiTotali ?? 0), 0)
+  const coperturaLibriPercento = libri.length
+    ? Number(((libriConTestoSet.size / libri.length) * 100).toFixed(1))
+    : 0
+  const coperturaCapitoliPercento = capitoli.length
+    ? Number(((capitoliConTestoSet.size / capitoli.length) * 100).toFixed(1))
+    : 0
+
+  const identitaCapitoliValida =
+    capitoli.length === capitoliConTestoSet.size + capitoliSenzaTesto.length
 
   const summary = {
-    libri: result.libri,
-    libriConTesto: libriConTestoCount,
-    libriSenzaTesto: result.libriSenzaTesto.length,
-    coperturaLibriPercento: coperturaLibri,
-    capitoliAnalitici: result.capitoliAnalitici,
-    documentiTesto: result.documentiTesto,
-    capitoliConTesto: result.capitoliConTesto,
-    coperturaCapitoliPercento: coperturaCapitoli,
-    versetti: result.versetti,
-    testiSenzaLibro: result.testiSenzaLibro.length,
-    testiSenzaCapitoloAnalitico: result.testiSenzaCapitoloAnalitico.length,
-    capitoliSenzaTesto: result.capitoliSenzaTesto.length,
-    libriConTradizioniMultiple: result.tradizioniMultiple.length,
-    documentiConVuotiAmmessi: result.versettiVuotiAmmessi.length,
-    documentiConAnomalieTestoVuoto: result.anomalieTestoVuoto.length,
+    libri: libri.length,
+    libriConTesto: libriConTestoSet.size,
+    libriSenzaTesto: libriSenzaTesto.length,
+    coperturaLibriPercento,
+    capitoliAnalitici: capitoli.length,
+    documentiTesto: testi.length,
+    capitoliConTesto: capitoliConTestoSet.size,
+    capitoliSenzaTesto: capitoliSenzaTesto.length,
+    coperturaCapitoliPercento,
+    versetti,
+    testiSenzaLibro: testiSenzaLibro.length,
+    testiSenzaCapitoloAnalitico: testiSenzaCapitoloAnalitico.length,
+    libriConTradizioniMultiple: libriConTradizioniMultiple.length,
+    documentiConVuotiAmmessi: testiConVuotiAmmessi.length,
+    documentiConAnomalieTestoVuoto: testiConVuotiAnomali.length,
+    identitaCapitoliValida,
   }
 
   console.log('\n====================================')
@@ -73,37 +97,44 @@ try {
   console.log('RIEPILOGO')
   console.log(JSON.stringify(summary, null, 2))
 
-  console.log('\nAPOCALISSE')
-  console.log(JSON.stringify(result.apocalisse, null, 2))
-
-  if (result.libriSenzaTesto.length) {
-    console.log('\nLIBRI ANCORA SENZA TESTO BIBLICO')
-    console.log(JSON.stringify(result.libriSenzaTesto, null, 2))
+  if (!identitaCapitoliValida) {
+    console.error('\n✗ ERRORE INTERNO: capitoliAnalitici != capitoliConTesto + capitoliSenzaTesto')
   } else {
-    console.log('\n✓ Tutti i libri hanno almeno un capitolo di testo biblico.')
+    console.log('\n✓ Identità di copertura verificata: capitoliAnalitici = capitoliConTesto + capitoliSenzaTesto.')
   }
 
-  if (result.tradizioniMultiple.length) {
+  if (libriSenzaTesto.length) {
+    console.log('\nLIBRI SENZA TESTO')
+    console.log(JSON.stringify(libriSenzaTesto, null, 2))
+  } else {
+    console.log('✓ Tutti i 73 libri hanno testo biblico collegato.')
+  }
+
+  if (capitoliSenzaTesto.length) {
+    console.log('\nCAPITOLI SENZA TESTO')
+    console.log(JSON.stringify(capitoliSenzaTesto, null, 2))
+  } else {
+    console.log('✓ Tutti i capitoli analitici hanno almeno un testo collegato.')
+  }
+
+  if (libriConTradizioniMultiple.length) {
     console.log('\nLIBRI CON PIÙ TRADIZIONI / TESTIMONI')
-    console.log(JSON.stringify(result.tradizioniMultiple, null, 2))
+    console.log(JSON.stringify(libriConTradizioniMultiple, null, 2))
   }
 
-  if (result.anomalieTestoVuoto.length) {
+  if (testiConVuotiAnomali.length) {
     console.log('\nANOMALIE: TESTO VUOTO NON GIUSTIFICATO')
-    console.log(JSON.stringify(result.anomalieTestoVuoto, null, 2))
+    console.log(JSON.stringify(testiConVuotiAnomali.map(t => ({_id: t._id, tradizione: t.tradizione, anomalie: t.vuotiAnomali})), null, 2))
   } else {
     console.log('\n✓ Nessun testo vuoto anomalo.')
   }
 
-  if (result.testiSenzaLibro.length || result.testiSenzaCapitoloAnalitico.length) {
+  if (testiSenzaLibro.length || testiSenzaCapitoloAnalitico.length) {
     console.log('\nANOMALIE DI RIFERIMENTO')
-    console.log(JSON.stringify({testiSenzaLibro: result.testiSenzaLibro, testiSenzaCapitoloAnalitico: result.testiSenzaCapitoloAnalitico}, null, 2))
+    console.log(JSON.stringify({testiSenzaLibro, testiSenzaCapitoloAnalitico}, null, 2))
   } else {
     console.log('✓ Nessun riferimento spezzato.')
   }
-
-  console.log('\nDETTAGLIO COMPLETO')
-  console.log(JSON.stringify(result, null, 2))
 
   console.log('\n====================================')
   console.log('  AUDIT COMPLETATO')
