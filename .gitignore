@@ -1,0 +1,24 @@
+
+# Dipendenze
+node_modules/
+
+# Backup locali
+*.backup.*
+*.pre-*.ts
+
+# Dataset / pacchetti di importazione locali
+*.ndjson
+salmi-normalizzati-v7.json
+salmi-testo-sanity-validazione.json
+
+# File temporanei
+.DS_Store
+
+README-PENTATEUCO-V2.txt
+giudici-riparazione-preview.txt
+
+# Sanity runtime generato
+.sanity/
+
+# Report locali di validazione
+*-validazione.json

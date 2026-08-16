@@ -1,15 +1,16 @@
-import {defineConfig} from 'sanity'
-import {structureTool} from 'sanity/structure'
+import { defineConfig } from 'sanity'
+import { structureTool } from 'sanity/structure'
 
 export default defineConfig({
   name: 'default',
   title: 'Biblia Fontes CMS',
+
   projectId: 'jc1k65lj',
   dataset: 'production',
 
   plugins: [
     structureTool({
-      structure: (S, context) =>
+      structure: (S) =>
         S.list()
           .title('Biblia Fontes')
           .items([
@@ -19,7 +20,10 @@ export default defineConfig({
                 S.documentTypeList('libro')
                   .title('Libri Biblici')
                   .defaultOrdering([
-                    {field: 'ordine', direction: 'asc'},
+                    {
+                      field: 'ordine',
+                      direction: 'asc',
+                    },
                   ])
                   .child((documentId) =>
                     S.list()
@@ -37,55 +41,43 @@ export default defineConfig({
 
                         S.listItem()
                           .title('📚 Capitoli')
-                          .child(async () => {
-                            const client = context.getClient({
-                              apiVersion: '2025-08-15',
-                            })
-
-                            const capitoli = await client.fetch(
-                              `*[
-                                _type == "capitolo" &&
-                                libro._ref == $libroId
-                              ] | order(numero asc) {
-                                _id,
-                                numero,
-                                titolo
-                              }`,
-                              {libroId: documentId}
-                            )
-
-                            return S.list()
-                              .id(`capitoli-${documentId}`)
+                          .child(
+                            S.documentTypeList('capitolo')
                               .title('Capitoli')
-                              .items(
-                                capitoli.map(
-                                  (capitolo: {
-                                    _id: string
-                                    numero?: number
-                                    titolo?: string
-                                  }) => {
-                                    const numero =
-                                      typeof capitolo.numero === 'number'
-                                        ? String(capitolo.numero).padStart(2, '0')
-                                        : '--'
-
-                                    const titolo =
-                                      capitolo.titolo || 'Senza titolo'
-
-                                    return S.listItem()
-                                      .id(capitolo._id)
-                                      .title(
-                                        `Capitolo ${numero} — ${titolo}`
-                                      )
-                                      .child(
-                                        S.document()
-                                          .schemaType('capitolo')
-                                          .documentId(capitolo._id)
-                                      )
-                                  }
-                                )
+                              .filter(
+                                '_type == "capitolo" && libro._ref == $libroId'
                               )
-                          }),
+                              .params({
+                                libroId: documentId,
+                              })
+                              .defaultOrdering([
+                                {
+                                  field: 'numero',
+                                  direction: 'asc',
+                                },
+                              ])
+                          ),
+
+                        S.divider(),
+
+                        S.listItem()
+                          .title('📜 Testo Biblico')
+                          .child(
+                            S.documentTypeList('testoBiblicoCapitolo')
+                              .title('Testo Biblico')
+                              .filter(
+                                '_type == "testoBiblicoCapitolo" && libro._ref == $libroId'
+                              )
+                              .params({
+                                libroId: documentId,
+                              })
+                              .defaultOrdering([
+                                {
+                                  field: 'numero',
+                                  direction: 'asc',
+                                },
+                              ])
+                          ),
                       ])
                   )
               ),
@@ -93,22 +85,15 @@ export default defineConfig({
             S.divider(),
 
             S.listItem()
-              .title('📚 Tradizioni / Strati Letterari')
-              .child(
-                S.documentTypeList('fonteBiblica')
-                  .title('Tradizioni / Strati Letterari')
-                  .defaultOrdering([
-                    {field: 'sigla', direction: 'asc'},
-                  ])
-              ),
-
-            S.listItem()
-              .title('📚 Fonti / Strati Letterari — archivio')
+              .title('📚 Fonti / Strati Letterari')
               .child(
                 S.documentTypeList('fonte')
                   .title('Fonti / Strati Letterari')
                   .defaultOrdering([
-                    {field: 'sigla', direction: 'asc'},
+                    {
+                      field: 'sigla',
+                      direction: 'asc',
+                    },
                   ])
               ),
 
@@ -118,7 +103,10 @@ export default defineConfig({
                 S.documentTypeList('testimonianza')
                   .title('Testimonianze Testuali')
                   .defaultOrdering([
-                    {field: 'sigla', direction: 'asc'},
+                    {
+                      field: 'sigla',
+                      direction: 'asc',
+                    },
                   ])
               ),
           ]),
@@ -127,6 +115,7 @@ export default defineConfig({
 
   schema: {
     types: [
+
       // ============================================================
       // LIBRO BIBLICO
       // ============================================================
@@ -137,199 +126,170 @@ export default defineConfig({
         title: 'Libro Biblico',
 
         fields: [
+
           {
             name: 'titolo',
             type: 'string',
             title: 'Titolo del Libro',
           },
+
           {
             name: 'titoloEbraico',
             type: 'string',
             title: 'Nome Originale',
-            description: 'Nome ebraico, aramaico o greco del libro.',
+            description:
+              'Nome ebraico, aramaico o greco del libro.',
           },
+
           {
             name: 'categoriaId',
             type: 'string',
             title: 'Categoria',
+
             options: {
               list: [
-                {title: 'Pentateuco', value: 'pentateuco'},
-                {title: 'Libri Storici', value: 'storici'},
-                {title: 'Libri Sapienziali', value: 'sapienziali'},
-                {title: 'Libri Profetici', value: 'profetici'},
-                {title: 'Vangeli', value: 'vangeli'},
-                {title: 'Atti degli Apostoli', value: 'atti'},
-                {title: 'Lettere Paoline', value: 'paoline'},
-                {title: 'Lettere Cattoliche', value: 'cattoliche'},
-                {title: 'Apocalittica', value: 'apocalittica'},
+                {
+                  title: 'Pentateuco',
+                  value: 'pentateuco',
+                },
+                {
+                  title: 'Libri Storici',
+                  value: 'storici',
+                },
+                {
+                  title: 'Libri Sapienziali',
+                  value: 'sapienziali',
+                },
+                {
+                  title: 'Libri Profetici',
+                  value: 'profetici',
+                },
+                {
+                  title: 'Vangeli',
+                  value: 'vangeli',
+                },
+                {
+                  title: 'Atti degli Apostoli',
+                  value: 'atti',
+                },
+                {
+                  title: 'Lettere Paoline',
+                  value: 'paoline',
+                },
+                {
+                  title: 'Lettere Cattoliche',
+                  value: 'cattoliche',
+                },
+                {
+                  title: 'Apocalittica',
+                  value: 'apocalittica',
+                },
               ],
             },
           },
+
           {
             name: 'ordine',
             type: 'number',
             title: 'Ordine nella Bibbia',
-            description: 'Posizione del libro nella Bibbia CEI 2008. Genesi = 1.',
+            description:
+              'Posizione del libro nella Bibbia CEI 2008. Genesi = 1.',
           },
+
           {
             name: 'capitoli',
             type: 'number',
             title: 'Numero Capitoli',
           },
+
           {
             name: 'lingua',
             type: 'string',
             title: 'Lingua Principale',
           },
 
-          // ============================================================
-          // PROFILO LETTERARIO / POETICO DEL LIBRO
-          // Utile soprattutto per Giobbe, Salmi, Proverbi, Qoèlet,
-          // Cantico dei Cantici, Sapienza e Siracide.
-          // ============================================================
-
-          {
-            name: 'profiloLetterario',
-            type: 'object',
-            title: 'Profilo Letterario / Poetico',
-            fields: [
-              {
-                name: 'generePrincipale',
-                type: 'string',
-                title: 'Genere Principale',
-                description:
-                  'Esempi: dialogo sapienziale, salterio, raccolta proverbiale, riflessione sapienziale, poesia amorosa, protrettica sapienziale.',
-              },
-              {
-                name: 'generiSecondari',
-                type: 'array',
-                title: 'Generi Secondari',
-                of: [{type: 'string'}],
-                options: {layout: 'tags'},
-              },
-              {
-                name: 'strutturaGenerale',
-                type: 'text',
-                title: 'Struttura Letteraria Generale',
-                description:
-                  'Macrostruttura del libro e principali blocchi o raccolte.',
-              },
-              {
-                name: 'criteriCompositivi',
-                type: 'text',
-                title: 'Criteri Compositivi',
-                description:
-                  'Criteri linguistici, poetici, tematici e redazionali usati per distinguere blocchi, raccolte o voci.',
-              },
-              {
-                name: 'notaMetodologica',
-                type: 'text',
-                title: 'Nota Metodologica',
-                description:
-                  'Precisa quali categorie sono dati testuali e quali sono ricostruzioni critiche.',
-              },
-            ],
-          },
-
-          {
-            name: 'macroSezioni',
-            type: 'array',
-            title: 'Macro-sezioni / Raccolte del Libro',
-            description:
-              'Permette di descrivere collezioni e grandi blocchi senza trasformarli automaticamente in fonti documentarie.',
-            of: [
-              {
-                type: 'object',
-                fields: [
-                  {name: 'etichetta', type: 'string', title: 'Nome della Sezione / Raccolta'},
-                  {name: 'sigla', type: 'string', title: 'Sigla'},
-                  {name: 'capitoloInizio', type: 'number', title: 'Capitolo Inizio'},
-                  {name: 'versettoInizio', type: 'number', title: 'Versetto Inizio'},
-                  {name: 'capitoloFine', type: 'number', title: 'Capitolo Fine'},
-                  {name: 'versettoFine', type: 'number', title: 'Versetto Fine'},
-                  {
-                    name: 'tipo',
-                    type: 'string',
-                    title: 'Tipo',
-                    options: {
-                      list: [
-                        {title: 'Raccolta', value: 'raccolta'},
-                        {title: 'Macro-sezione', value: 'macro_sezione'},
-                        {title: 'Cornice narrativa', value: 'cornice'},
-                        {title: 'Dialogo / discorsi', value: 'dialoghi'},
-                        {title: 'Poema / unità poetica', value: 'poema'},
-                        {title: 'Epilogo / redazione', value: 'epilogo'},
-                        {title: 'Altro', value: 'altro'},
-                      ],
-                    },
-                  },
-                  {
-                    name: 'certezza',
-                    type: 'string',
-                    title: 'Certezza della Delimitazione',
-                    options: {
-                      list: [
-                        {title: '🟢 Dato testuale / delimitazione chiara', value: 'consenso'},
-                        {title: '🟡 Ipotesi accademica', value: 'ipotesi'},
-                        {title: '🟠 Discussa', value: 'dibattuta'},
-                      ],
-                    },
-                  },
-                  {name: 'descrizione', type: 'text', title: 'Descrizione'},
-                  {name: 'notaCritica', type: 'text', title: 'Nota Critica'},
-                ],
-              },
-            ],
-          },
+          // ========================================================
+          // DATAZIONE DELLA REDAZIONE
+          // ========================================================
 
           {
             name: 'datazione',
             type: 'object',
             title: 'Datazione della Redazione',
+
             fields: [
+
               {
                 name: 'etichettaInizio',
                 type: 'string',
                 title: 'Etichetta Inizio',
+                description:
+                  'Esempio: ca. VIII–VII sec. a.C.',
               },
+
               {
                 name: 'etichettaFine',
                 type: 'string',
                 title: 'Etichetta Fine',
+                description:
+                  'Esempio: ca. V sec. a.C.',
               },
+
               {
                 name: 'datazioneIniziale',
                 type: 'number',
                 title: 'Anno Iniziale',
-                description: 'Numero negativo per gli anni a.C.',
+                description:
+                  'Numero negativo per gli anni a.C. Esempio: -750.',
               },
+
               {
                 name: 'datazioneFinale',
                 type: 'number',
                 title: 'Anno Finale',
-                description: 'Numero negativo per gli anni a.C.',
+                description:
+                  'Numero negativo per gli anni a.C. Esempio: -400.',
               },
+
               {
                 name: 'certezza',
                 type: 'string',
                 title: 'Stato della Datazione',
+
                 options: {
                   list: [
-                    {title: '🟢 Consenso ampio', value: 'consenso'},
-                    {title: '🟡 Ipotesi accademica', value: 'ipotesi'},
-                    {title: '🟠 Ricostruzione discussa', value: 'dibattuta'},
-                    {title: '🔴 Ipotesi speculativa', value: 'speculativa'},
+                    {
+                      title: '🟢 Consenso ampio',
+                      value: 'consenso',
+                    },
+                    {
+                      title: '🟡 Ipotesi accademica',
+                      value: 'ipotesi',
+                    },
+                    {
+                      title: '🟠 Ricostruzione discussa',
+                      value: 'dibattuta',
+                    },
+                    {
+                      title: '🔴 Ipotesi speculativa',
+                      value: 'speculativa',
+                    },
                   ],
                 },
               },
+
               {
                 name: 'nota',
                 type: 'text',
                 title: 'Nota sulla Datazione',
               },
+
             ],
           },
+
+          // ========================================================
+          // DESCRIZIONE GENERALE
+          // ========================================================
 
           {
             name: 'descrizione',
@@ -337,212 +297,476 @@ export default defineConfig({
             title: 'Descrizione Generale',
           },
 
+          // ========================================================
+          // METODI STORICO-CRITICI
+          // ========================================================
+
           {
             name: 'metodiAnalisi',
             type: 'array',
             title: 'Metodi Storico-Critici',
+
             of: [
               {
                 type: 'object',
+
                 fields: [
+
                   {
                     name: 'metodo',
                     type: 'string',
                     title: 'Metodo',
+
                     options: {
                       list: [
-                        {title: 'Critica Testuale', value: 'testuale'},
-                        {title: 'Critica delle Fonti', value: 'fonti'},
-                        {title: 'Critica delle Forme', value: 'forme'},
-                        {title: 'Critica della Tradizione', value: 'tradizione'},
-                        {title: 'Critica della Redazione', value: 'redazione'},
+                        {
+                          title: 'Critica Testuale',
+                          value: 'testuale',
+                        },
+                        {
+                          title: 'Critica delle Fonti',
+                          value: 'fonti',
+                        },
+                        {
+                          title: 'Critica delle Forme',
+                          value: 'forme',
+                        },
+                        {
+                          title: 'Critica della Tradizione',
+                          value: 'tradizione',
+                        },
+                        {
+                          title: 'Critica della Redazione',
+                          value: 'redazione',
+                        },
                       ],
                     },
                   },
+
                   {
                     name: 'domanda',
                     type: 'string',
                     title: 'Domanda del Metodo',
                   },
+
                   {
                     name: 'sintesi',
                     type: 'text',
                     title: 'Sintesi',
+                    description:
+                      'Sintesi breve dell’applicazione del metodo al libro.',
                   },
+
                   {
                     name: 'analisi',
                     type: 'text',
                     title: 'Analisi Approfondita',
                   },
+
                 ],
               },
             ],
           },
 
+          // ========================================================
+          // MONDO DIETRO IL TESTO
+          // ========================================================
+
           {
             name: 'mondoDietroIlTesto',
             type: 'text',
             title: 'Il Mondo Dietro il Testo',
+            description:
+              'Sintesi degli eventi narrati e della loro eventuale collocazione cronologica.',
           },
 
           {
             name: 'eventiNarrati',
             type: 'array',
             title: 'Eventi Narrati',
+
             of: [
               {
                 type: 'object',
+
                 fields: [
-                  {name: 'etichetta', type: 'string', title: 'Evento Narrato'},
-                  {name: 'inizio', type: 'number', title: 'Anno Iniziale'},
-                  {name: 'fine', type: 'number', title: 'Anno Finale'},
+
+                  {
+                    name: 'etichetta',
+                    type: 'string',
+                    title: 'Evento Narrato',
+                  },
+
+                  {
+                    name: 'inizio',
+                    type: 'number',
+                    title: 'Anno Iniziale',
+                    description:
+                      'Numero negativo per gli anni a.C.',
+                  },
+
+                  {
+                    name: 'fine',
+                    type: 'number',
+                    title: 'Anno Finale',
+                    description:
+                      'Numero negativo per gli anni a.C.',
+                  },
+
                   {
                     name: 'certezza',
                     type: 'string',
                     title: 'Stato',
+
                     options: {
                       list: [
-                        {title: '🟢 Storicamente documentato', value: 'storico'},
-                        {title: '🟡 Storicamente plausibile', value: 'plausibile'},
-                        {title: '🟠 Tradizionale / narrativo', value: 'tradizionale'},
-                        {title: '🔴 Non databile', value: 'non_databile'},
+                        {
+                          title: '🟢 Storicamente documentato',
+                          value: 'storico',
+                        },
+                        {
+                          title: '🟡 Storicamente plausibile',
+                          value: 'plausibile',
+                        },
+                        {
+                          title: '🟠 Tradizionale / narrativo',
+                          value: 'tradizionale',
+                        },
+                        {
+                          title: '🔴 Non databile',
+                          value: 'non\_databile',
+                        },
                       ],
                     },
                   },
-                  {name: 'descrizione', type: 'text', title: 'Nota Critica'},
+
+                  {
+                    name: 'descrizione',
+                    type: 'text',
+                    title: 'Nota Critica',
+                  },
+
                 ],
               },
             ],
           },
+
+          // ========================================================
+          // MONDO DEL TESTO
+          // ========================================================
 
           {
             name: 'mondoDelTesto',
             type: 'text',
             title: 'Il Mondo del Testo',
+            description:
+              'Sintesi delle fasi di formazione, composizione e redazione.',
           },
+
+          // ========================================================
+          // FASI GENERALI DI REDAZIONE
+          // ========================================================
 
           {
             name: 'redazione',
             type: 'array',
             title: 'Fasi di Redazione',
+
             of: [
               {
                 type: 'object',
+
                 fields: [
-                  {name: 'etichetta', type: 'string', title: 'Fase / Strato'},
+
+                  {
+                    name: 'etichetta',
+                    type: 'string',
+                    title: 'Fase / Strato',
+                  },
+
                   {
                     name: 'fonte',
                     type: 'reference',
                     title: 'Fonte / Strato Letterario',
-                    to: [{type: 'fonte'}, {type: 'fonteBiblica'}],
+
+                    to: [
+                      {
+                        type: 'fonte',
+                      },
+                    ],
                   },
-                  {name: 'inizio', type: 'number', title: 'Anno Inizio'},
-                  {name: 'fine', type: 'number', title: 'Anno Fine'},
-                  {name: 'datazione', type: 'string', title: 'Etichetta della Datazione'},
+
+                  {
+                    name: 'inizio',
+                    type: 'number',
+                    title: 'Anno Inizio',
+                  },
+
+                  {
+                    name: 'fine',
+                    type: 'number',
+                    title: 'Anno Fine',
+                  },
+
+                  {
+                    name: 'datazione',
+                    type: 'string',
+                    title: 'Etichetta della Datazione',
+                    description:
+                      'Esempio: ca. VI–V sec. a.C.',
+                  },
+
                   {
                     name: 'certezza',
                     type: 'string',
                     title: 'Stato della Ricostruzione',
+
                     options: {
                       list: [
-                        {title: '🟢 Consenso', value: 'consenso'},
-                        {title: '🟡 Ipotesi', value: 'ipotesi'},
-                        {title: '🟠 Dibattuta', value: 'dibattuta'},
-                        {title: '🔴 Speculativa', value: 'speculativa'},
+                        {
+                          title: '🟢 Consenso',
+                          value: 'consenso',
+                        },
+                        {
+                          title: '🟡 Ipotesi',
+                          value: 'ipotesi',
+                        },
+                        {
+                          title: '🟠 Dibattuta',
+                          value: 'dibattuta',
+                        },
+                        {
+                          title: '🔴 Speculativa',
+                          value: 'speculativa',
+                        },
                       ],
                     },
                   },
-                  {name: 'descrizione', type: 'text', title: 'Descrizione'},
-                  {name: 'motivazione', type: 'text', title: 'Motivazione Critica'},
+
+                  {
+                    name: 'descrizione',
+                    type: 'text',
+                    title: 'Descrizione',
+                  },
+
+                  {
+                    name: 'motivazione',
+                    type: 'text',
+                    title: 'Motivazione Critica',
+                    description:
+                      'Elementi linguistici, stilistici, tematici, strutturali o redazionali alla base della ricostruzione.',
+                  },
+
+                  {
+                    name: 'bibliografia',
+                    type: 'array',
+                    title: 'Bibliografia Specifica',
+
+                    of: [
+                      {
+                        type: 'object',
+
+                        fields: [
+
+                          {
+                            name: 'citazione',
+                            type: 'text',
+                            title: 'Citazione',
+                          },
+
+                          {
+                            name: 'url',
+                            type: 'url',
+                            title: 'URL',
+                          },
+
+                        ],
+                      },
+                    ],
+                  },
+
                 ],
               },
             ],
           },
 
+          // ========================================================
+          // MONDO ATTORNO AL TESTO
+          // ========================================================
+
           {
             name: 'mondoAttornoAlTesto',
             type: 'text',
             title: 'Il Mondo Attorno al Testo',
+            description:
+              'Contesto storico, archeologico e culturale.',
           },
 
           {
             name: 'contestoStorico',
             type: 'array',
             title: 'Contesto Storico',
+
             of: [
               {
                 type: 'object',
+
                 fields: [
-                  {name: 'etichetta', type: 'string', title: 'Evento / Reperto / Contesto'},
-                  {name: 'inizio', type: 'number', title: 'Anno Iniziale'},
-                  {name: 'fine', type: 'number', title: 'Anno Finale'},
+
+                  {
+                    name: 'etichetta',
+                    type: 'string',
+                    title: 'Evento / Reperto / Contesto',
+                  },
+
+                  {
+                    name: 'inizio',
+                    type: 'number',
+                    title: 'Anno Iniziale',
+                  },
+
+                  {
+                    name: 'fine',
+                    type: 'number',
+                    title: 'Anno Finale',
+                  },
+
                   {
                     name: 'certezza',
                     type: 'string',
                     title: 'Tipo di Evidenza',
+
                     options: {
                       list: [
-                        {title: '🟢 Archeologico', value: 'archeologico'},
-                        {title: '🟢 Fonte storica', value: 'storico'},
-                        {title: '🟡 Ricostruzione storica', value: 'ricostruzione'},
+                        {
+                          title: '🟢 Archeologico',
+                          value: 'archeologico',
+                        },
+                        {
+                          title: '🟢 Fonte storica',
+                          value: 'storico',
+                        },
+                        {
+                          title: '🟡 Ricostruzione storica',
+                          value: 'ricostruzione',
+                        },
                       ],
                     },
                   },
-                  {name: 'descrizione', type: 'text', title: 'Descrizione e Paralleli'},
+
+                  {
+                    name: 'descrizione',
+                    type: 'text',
+                    title: 'Descrizione e Paralleli',
+                  },
+
                 ],
               },
             ],
           },
+
+          // ========================================================
+          // TESTIMONIANZE TESTUALI
+          // ========================================================
 
           {
             name: 'testimonianze',
             type: 'array',
             title: 'Testimonianze Testuali',
+
             of: [
               {
                 type: 'object',
+
                 fields: [
+
                   {
                     name: 'testimonianza',
                     type: 'reference',
                     title: 'Testimonianza',
-                    to: [{type: 'testimonianza'}],
+
+                    to: [
+                      {
+                        type: 'testimonianza',
+                      },
+                    ],
                   },
-                  {name: 'descrizione', type: 'text', title: 'Note sulla Trasmissione'},
+
+                  {
+                    name: 'descrizione',
+                    type: 'text',
+                    title: 'Note sulla Trasmissione',
+                  },
+
                 ],
               },
             ],
           },
+
+          // ========================================================
+          // FONTI EXTRA-BIBLICHE
+          // ========================================================
 
           {
             name: 'fontiExtraBibliche',
             type: 'array',
             title: 'Fonti e Paralleli Extra-Biblici',
+
             of: [
               {
                 type: 'object',
+
                 fields: [
-                  {name: 'titolo', type: 'string', title: 'Fonte'},
-                  {name: 'datazione', type: 'string', title: 'Datazione'},
-                  {name: 'tipo', type: 'string', title: 'Tipo'},
-                  {name: 'descrizione', type: 'text', title: 'Relazione con il Libro'},
+
+                  {
+                    name: 'titolo',
+                    type: 'string',
+                    title: 'Fonte',
+                  },
+
+                  {
+                    name: 'datazione',
+                    type: 'string',
+                    title: 'Datazione',
+                  },
+
+                  {
+                    name: 'tipo',
+                    type: 'string',
+                    title: 'Tipo',
+                  },
+
+                  {
+                    name: 'descrizione',
+                    type: 'text',
+                    title: 'Relazione con il Libro',
+                  },
+
                 ],
               },
             ],
           },
 
+          // ========================================================
+          // BIBLIOGRAFIA DEL LIBRO
+          // ========================================================
+
           {
             name: 'bibliografia',
             type: 'array',
             title: 'Bibliografia',
+
             of: [
               {
                 type: 'object',
+
                 fields: [
+
                   {
                     name: 'tipo',
                     type: 'string',
                     title: 'Tipo',
+
                     options: {
                       list: [
                         'Commentario',
@@ -555,12 +779,24 @@ export default defineConfig({
                       ],
                     },
                   },
-                  {name: 'citazione', type: 'text', title: 'Citazione Bibliografica'},
-                  {name: 'url', type: 'url', title: 'URL'},
+
+                  {
+                    name: 'citazione',
+                    type: 'text',
+                    title: 'Citazione Bibliografica',
+                  },
+
+                  {
+                    name: 'url',
+                    type: 'url',
+                    title: 'URL',
+                  },
+
                 ],
               },
             ],
           },
+
         ],
       },
 
@@ -574,60 +810,125 @@ export default defineConfig({
         title: 'Capitolo Biblico',
 
         fields: [
+
           {
             name: 'libro',
             type: 'reference',
             title: 'Libro',
-            to: [{type: 'libro'}],
+
+            to: [
+              {
+                type: 'libro',
+              },
+            ],
           },
+
           {
             name: 'numero',
             type: 'number',
             title: 'Numero Capitolo',
           },
+
           {
             name: 'titolo',
             type: 'string',
             title: 'Titolo / Tema del Capitolo',
           },
+
+          // ========================================================
+          // SINTESI NARRATIVA
+          // ========================================================
+
           {
             name: 'sintesi',
             type: 'text',
             title: 'Sintesi del Capitolo',
+            description:
+              'Sintesi narrativa e strutturale breve in stile accademico.',
           },
+
           {
             name: 'struttura',
             type: 'text',
             title: 'Struttura del Capitolo',
+            description:
+              'Schema sintetico delle principali unità narrative o poetiche.',
           },
+
+          // ========================================================
+          // EVENTI NARRATI
+          // ========================================================
+
           {
             name: 'eventiNarrati',
             type: 'text',
             title: 'Eventi Narrati',
           },
 
+          // ========================================================
+          // DATAZIONE DEL CAPITOLO
+          // ========================================================
+
           {
             name: 'datazione',
             type: 'object',
             title: 'Datazione / Collocazione',
+
             fields: [
-              {name: 'inizio', type: 'number', title: 'Anno Inizio'},
-              {name: 'fine', type: 'number', title: 'Anno Fine'},
-              {name: 'etichetta', type: 'string', title: 'Etichetta della Datazione'},
+
+              {
+                name: 'inizio',
+                type: 'number',
+                title: 'Anno Inizio',
+              },
+
+              {
+                name: 'fine',
+                type: 'number',
+                title: 'Anno Fine',
+              },
+
+              {
+                name: 'etichetta',
+                type: 'string',
+                title: 'Etichetta della Datazione',
+                description:
+                  'Esempio: ca. VIII–VII sec. a.C.',
+              },
+
               {
                 name: 'certezza',
                 type: 'string',
                 title: 'Certezza',
+
                 options: {
                   list: [
-                    {title: '🟢 Consenso', value: 'consenso'},
-                    {title: '🟡 Ipotesi', value: 'ipotesi'},
-                    {title: '🟠 Dibattuta', value: 'dibattuta'},
-                    {title: '🔴 Non determinabile', value: 'non_determinabile'},
+                    {
+                      title: '🟢 Consenso',
+                      value: 'consenso',
+                    },
+                    {
+                      title: '🟡 Ipotesi',
+                      value: 'ipotesi',
+                    },
+                    {
+                      title: '🟠 Dibattuta',
+                      value: 'dibattuta',
+                    },
+                    {
+                      title: '🔴 Non determinabile',
+                      value: 'non\_determinabile',
+                    },
                   ],
                 },
               },
-              {name: 'nota', type: 'text', title: 'Nota sulla Datazione'},
+
+              {
+                name: 'nota',
+                type: 'text',
+                title: 'Nota sulla Datazione',
+              },
+
             ],
           },
 
@@ -847,7 +1148,7 @@ export default defineConfig({
                     name: 'fonte',
                     type: 'reference',
                     title: 'Tradizione / Strato Letterario',
-                    to: [{type: 'fonteBiblica'}],
+                    to: [{type: 'fonte'}],
                   },
                   {
                     name: 'modelloCritico',
@@ -855,6 +1156,8 @@ export default defineConfig({
                     title: 'Modello Critico',
                     options: {
                       list: [
+                        {title: 'Macro-unità letteraria', value: 'macro_unita_letteraria'},
+                        {title: 'Tradizione narrativa', value: 'tradizione_narrativa'},
                         {title: 'Modello documentario classico', value: 'documentario_classico'},
                         {title: 'Modello P / H', value: 'p_h'},
                         {title: 'Modello redazionale', value: 'redazionale'},
@@ -910,31 +1213,9 @@ export default defineConfig({
                   {
                     name: 'funzione',
                     type: 'string',
-                    title: 'Funzione Letteraria',
-                    options: {
-                      list: [
-                        {title: 'Narrativa', value: 'narrativa'},
-                        {title: 'Legislativa', value: 'legislativa'},
-                        {title: 'Rituale / cultuale', value: 'rituale'},
-                        {title: 'Genealogica', value: 'genealogica'},
-                        {title: 'Poetica', value: 'poetica'},
-                        {title: 'Sapienziale', value: 'sapienziale'},
-                        {title: 'Dialogica', value: 'dialogica'},
-                        {title: 'Monologo', value: 'monologo'},
-                        {title: 'Teofania', value: 'teofania'},
-                        {title: 'Teofania + epilogo', value: 'teofania-epilogo'},
-                        {title: 'Discorsi di Eliu', value: 'eliu'},
-                        {title: 'Memorialistica', value: 'memorialistico'},
-                        {title: 'Documentaria', value: 'documentario'},
-                        {title: 'Storiografica', value: 'storiografica'},
-                        {title: 'Testuale', value: 'testuale'},
-                        {title: 'Testuale-redazionale', value: 'testuale-redazionale'},
-                        {title: 'Compositiva', value: 'compositiva'},
-                        {title: 'Fonte', value: 'fonte'},
-                        {title: 'Redazionale', value: 'redazionale'},
-                        {title: 'Altra', value: 'altra'},
-                      ],
-                    },
+                    title: 'Funzione / Nota Letteraria',
+                    description:
+                      'Campo aperto per conservare sia categorie sintetiche sia formulazioni critiche già presenti nel corpus.',
                   },
                   {
                     name: 'descrizione',
@@ -982,255 +1263,322 @@ export default defineConfig({
             ],
           },
 
-          // ==========================================================
-          // VECCHIA STRUTTURA: MANTENUTA PER COMPATIBILITÀ
-          // ==========================================================
+
+          // ========================================================
+          // FONTI / STRATI LETTERARI DEL CAPITOLO — LEGACY
+          // ========================================================
 
           {
             name: 'fonti',
             type: 'array',
-            title: 'Fonti / Strati Letterari — Sintesi del Capitolo',
-            description:
-              'Campo legacy. Per nuove attribuzioni utilizzare Attribuzioni Fonti / Strati per Versetti.',
+            title: 'Fonti / Strati Letterari',
+
             of: [
               {
                 type: 'object',
+
                 fields: [
+
                   {
                     name: 'fonte',
                     type: 'reference',
                     title: 'Fonte / Strato',
-                    to: [{type: 'fonte'}],
+
+                    to: [
+                      {
+                        type: 'fonte',
+                      },
+                    ],
                   },
+
                   {
                     name: 'presenza',
                     type: 'string',
                     title: 'Tipo di Presenza',
+
                     options: {
                       list: [
-                        {title: 'Prevalente', value: 'prevalente'},
-                        {title: 'Significativa', value: 'significativa'},
-                        {title: 'Possibile', value: 'possibile'},
-                        {title: 'Marginale', value: 'marginale'},
-                        {title: 'Non riconoscibile', value: 'assente'},
+                        {
+                          title: 'Prevalente',
+                          value: 'prevalente',
+                        },
+                        {
+                          title: 'Significativa',
+                          value: 'significativa',
+                        },
+                        {
+                          title: 'Possibile',
+                          value: 'possibile',
+                        },
+                        {
+                          title: 'Marginale',
+                          value: 'marginale',
+                        },
+                        {
+                          title: 'Non riconoscibile',
+                          value: 'assente',
+                        },
                       ],
                     },
                   },
+
                   {
                     name: 'inizio',
                     type: 'number',
                     title: 'Datazione Iniziale',
+                    description:
+                      'Anno iniziale della datazione proposta. Negativo per a.C.',
                   },
+
                   {
                     name: 'fine',
                     type: 'number',
                     title: 'Datazione Finale',
+                    description:
+                      'Anno finale della datazione proposta. Negativo per a.C.',
                   },
+
                   {
                     name: 'datazione',
                     type: 'string',
                     title: 'Etichetta della Datazione',
+                    description:
+                      'Esempio: ca. VI–V sec. a.C.',
                   },
+
                   {
                     name: 'certezza',
                     type: 'string',
                     title: 'Grado di Certezza',
+
                     options: {
                       list: [
-                        {title: '🟢 Consenso ampio', value: 'consenso'},
-                        {title: '🟡 Ipotesi accademica', value: 'ipotesi'},
-                        {title: '🟠 Ricostruzione discussa', value: 'dibattuta'},
-                        {title: '🔴 Ipotesi speculativa', value: 'speculativa'},
+                        {
+                          title: '🟢 Consenso ampio',
+                          value: 'consenso',
+                        },
+                        {
+                          title: '🟡 Ipotesi accademica',
+                          value: 'ipotesi',
+                        },
+                        {
+                          title: '🟠 Ricostruzione discussa',
+                          value: 'dibattuta',
+                        },
+                        {
+                          title: '🔴 Ipotesi speculativa',
+                          value: 'speculativa',
+                        },
                       ],
                     },
                   },
+
                   {
                     name: 'motivazione',
                     type: 'text',
                     title: 'Motivazione Critica',
+                    description:
+                      'Elementi linguistici, stilistici, tematici, strutturali o redazionali che motivano l’attribuzione.',
                   },
+
                   {
                     name: 'bibliografia',
                     type: 'array',
                     title: 'Bibliografia Specifica',
+
                     of: [
                       {
                         type: 'object',
+
                         fields: [
-                          {name: 'citazione', type: 'text', title: 'Citazione'},
-                          {name: 'url', type: 'url', title: 'URL'},
+
+                          {
+                            name: 'citazione',
+                            type: 'text',
+                            title: 'Citazione',
+                          },
+
+                          {
+                            name: 'url',
+                            type: 'url',
+                            title: 'URL',
+                          },
+
                         ],
                       },
                     ],
                   },
+
                 ],
               },
             ],
           },
+
+          // ========================================================
+          // ANALISI STORICO-CRITICA
+          // ========================================================
 
           {
             name: 'analisiStoricoCritica',
             type: 'text',
             title: 'Analisi Storico-Critica',
           },
+
+          // ========================================================
+          // CRITICA DELLA TRADIZIONE
+          // ========================================================
+
           {
             name: 'tradizione',
             type: 'text',
             title: 'Critica della Tradizione',
           },
+
+          // ========================================================
+          // CRITICA DELLA REDAZIONE
+          // ========================================================
+
           {
             name: 'redazione',
             type: 'text',
             title: 'Critica della Redazione',
           },
+
+          // ========================================================
+          // CONTESTO STORICO-ARCHEOLOGICO
+          // ========================================================
+
           {
             name: 'contestoStorico',
             type: 'text',
             title: 'Contesto Storico-Archeologico',
           },
+
+          // ========================================================
+          // CRITICA TESTUALE
+          // ========================================================
+
           {
             name: 'testoCritico',
             type: 'text',
             title: 'Critica Testuale',
             description:
-              'Varianti e storia della trasmissione secondo i testimoni pertinenti al libro: MT, LXX, Qumran, recensioni greche, versioni antiche o altre tradizioni. Non usare automaticamente MT/LXX quando non applicabile.',
+              'Varianti e problemi testuali, con particolare attenzione a MT e LXX.',
           },
+
+          // ========================================================
+          // BIBLIOGRAFIA DEL CAPITOLO
+          // ========================================================
+
           {
             name: 'bibliografia',
             type: 'array',
             title: 'Bibliografia',
+
             of: [
               {
                 type: 'object',
+
                 fields: [
-                  {name: 'citazione', type: 'text', title: 'Citazione'},
-                  {name: 'url', type: 'url', title: 'URL'},
+
+                  {
+                    name: 'citazione',
+                    type: 'text',
+                    title: 'Citazione',
+                  },
+
+                  {
+                    name: 'url',
+                    type: 'url',
+                    title: 'URL',
+                  },
+
                 ],
               },
             ],
           },
+
         ],
       },
 
       // ============================================================
-      // NUOVA ANAGRAFICA: TRADIZIONE / STRATO LETTERARIO
+      // FONTE / STRATO LETTERARIO
       // ============================================================
 
       {
-        name: 'fonteBiblica',
+        name: 'fonte',
         type: 'document',
-        title: 'Tradizione / Strato Letterario',
+        title: 'Fonte / Strato Letterario',
 
         fields: [
+
           {
             name: 'sigla',
             type: 'string',
             title: 'Sigla',
-            description: 'Esempi: P, H, Dtr, Chr, Job-D, Est-LXX.',
           },
+
           {
             name: 'nome',
             type: 'string',
             title: 'Nome',
           },
-          {
-            name: 'titolo',
-            type: 'string',
-            title: 'Titolo Esteso',
-          },
-          {
-            name: 'categoria',
-            type: 'string',
-            title: 'Categoria',
-            options: {
-              list: [
-                {title: 'Fonte / Tradizione', value: 'fonte'},
-                {title: 'Scuola / Strato', value: 'scuola'},
-                {title: 'Redazione', value: 'redazione'},
-                {title: 'Modello critico', value: 'modello'},
-                {title: 'Composizione', value: 'composizione'},
-                {title: 'Raccolta / Collezione', value: 'raccolta'},
-                {title: 'Forma testuale / Recensione', value: 'forma_testuale'},
-                {title: 'Memorie / Tradizione memorialistica', value: 'memorie'},
-                {title: 'Dossier / Documentazione', value: 'documentario'},
-                {title: 'Composizione storiografica', value: 'storiografia'},
-                {title: 'Epitome / Compendio', value: 'epitome'},
-                {title: 'Blocco poetico / sapienziale', value: 'poetico'},
-              ],
-            },
-          },
-          {
-            name: 'periodo',
-            type: 'string',
-            title: 'Periodo / Datazione Sintetica',
-            description:
-              'Campo compatibile con i documenti critici già importati.',
-          },
-          {
-            name: 'inizio',
-            type: 'number',
-            title: 'Anno Inizio — compatibilità',
-            description: 'Campo numerico usato da alcuni documenti già importati.',
-          },
-          {
-            name: 'fine',
-            type: 'number',
-            title: 'Anno Fine — compatibilità',
-            description: 'Campo numerico usato da alcuni documenti già importati.',
-          },
-          {
-            name: 'certezza',
-            type: 'string',
-            title: 'Certezza — compatibilità',
-            options: {
-              list: [
-                {title: '🟢 Consenso', value: 'consenso'},
-                {title: '🟡 Ipotesi', value: 'ipotesi'},
-                {title: '🟠 Dibattuta', value: 'dibattuta'},
-                {title: '🔴 Speculativa', value: 'speculativa'},
-              ],
-            },
-          },
-          {
-            name: 'nota',
-            type: 'text',
-            title: 'Nota — compatibilità',
-          },
+
           {
             name: 'descrizione',
             type: 'text',
             title: 'Descrizione',
           },
+
           {
             name: 'datazione',
             type: 'string',
             title: 'Datazione Proposta',
           },
+
           {
             name: 'datazioneInizio',
             type: 'number',
             title: 'Anno Iniziale',
-            description: 'Numero negativo per gli anni a.C.',
+            description:
+              'Numero negativo per gli anni a.C.',
           },
+
           {
             name: 'datazioneFine',
             type: 'number',
             title: 'Anno Finale',
-            description: 'Numero negativo per gli anni a.C.',
+            description:
+              'Numero negativo per gli anni a.C.',
           },
+
           {
             name: 'statoRicerca',
             type: 'string',
             title: 'Stato della Ricerca',
+
             options: {
               list: [
-                {title: '🟢 Ampiamente accettata', value: 'accettata'},
-                {title: '🟡 Discussa', value: 'discussa'},
-                {title: '🟠 Fortemente discussa', value: 'fortemente_discussa'},
-                {title: '🔴 Ipotesi minoritaria / speculativa', value: 'speculativa'},
+                {
+                  title: '🟢 Ampiamente accettata',
+                  value: 'accettata',
+                },
+                {
+                  title: '🟡 Discussa',
+                  value: 'discussa',
+                },
+                {
+                  title: '🟠 Fortemente discussa',
+                  value: 'fortemente\_discussa',
+                },
+                {
+                  title: '🔴 Ipotesi minoritaria / speculativa',
+                  value: 'speculativa',
+                },
               ],
             },
           },
+
           {
             name: 'criteri',
             type: 'text',
@@ -1238,89 +1586,457 @@ export default defineConfig({
             description:
               'Elementi linguistici, stilistici, teologici, strutturali o storici utilizzati per identificare lo strato.',
           },
-          {
-            name: 'relazioneConAltreTradizioni',
-            type: 'text',
-            title: 'Relazione con altre Tradizioni',
-            description:
-              'Rapporto con altre fonti, raccolte, recensioni, voci o redazioni. Utilizzabile anche per corpora sapienziali e poetici.',
-          },
+
           {
             name: 'notaCritica',
             type: 'text',
             title: 'Nota Critica',
           },
+
           {
             name: 'bibliografia',
             type: 'array',
             title: 'Bibliografia',
+
             of: [
               {
                 type: 'object',
+
                 fields: [
-                  {name: 'citazione', type: 'text', title: 'Citazione'},
-                  {name: 'url', type: 'url', title: 'URL'},
+
+                  {
+                    name: 'citazione',
+                    type: 'text',
+                    title: 'Citazione',
+                  },
+
+                  {
+                    name: 'url',
+                    type: 'url',
+                    title: 'URL',
+                  },
+
                 ],
               },
             ],
           },
+
         ],
       },
 
+
       // ============================================================
-      // VECCHIO TIPO FONTE — MANTENUTO PER COMPATIBILITÀ
+      // TESTO BIBLICO — CAPITOLO
       // ============================================================
 
       {
-        name: 'fonte',
+        name: 'testoBiblicoCapitolo',
         type: 'document',
-        title: 'Fonte / Strato Letterario — Legacy',
+        title: 'Testo Biblico — Capitolo',
 
         fields: [
-          {name: 'sigla', type: 'string', title: 'Sigla'},
-          {name: 'nome', type: 'string', title: 'Nome'},
-          {name: 'descrizione', type: 'text', title: 'Descrizione'},
-          {name: 'datazione', type: 'string', title: 'Datazione Proposta'},
+
           {
-            name: 'datazioneInizio',
-            type: 'number',
-            title: 'Anno Iniziale',
-          },
-          {
-            name: 'datazioneFine',
-            type: 'number',
-            title: 'Anno Finale',
-          },
-          {
-            name: 'statoRicerca',
-            type: 'string',
-            title: 'Stato della Ricerca',
-            options: {
-              list: [
-                {title: '🟢 Ampiamente accettata', value: 'accettata'},
-                {title: '🟡 Discussa', value: 'discussa'},
-                {title: '🟠 Fortemente discussa', value: 'fortemente_discussa'},
-                {title: '🔴 Ipotesi minoritaria / speculativa', value: 'speculativa'},
-              ],
-            },
-          },
-          {name: 'criteri', type: 'text', title: 'Criteri di Identificazione'},
-          {name: 'notaCritica', type: 'text', title: 'Nota Critica'},
-          {
-            name: 'bibliografia',
-            type: 'array',
-            title: 'Bibliografia',
-            of: [
+            name: 'libro',
+            type: 'reference',
+            title: 'Libro',
+            to: [
               {
-                type: 'object',
-                fields: [
-                  {name: 'citazione', type: 'text', title: 'Citazione'},
-                  {name: 'url', type: 'url', title: 'URL'},
-                ],
+                type: 'libro',
+              },
+            ],
+            validation: (Rule) => Rule.required(),
+          },
+
+          {
+            name: 'capitolo',
+            type: 'reference',
+            title: 'Capitolo Analitico',
+            description:
+              'Collegamento facoltativo alla scheda critica del capitolo.',
+            weak: true,
+            to: [
+              {
+                type: 'capitolo',
               },
             ],
           },
+
+          {
+            name: 'numero',
+            type: 'number',
+            title: 'Numero Capitolo / Salmo',
+            validation: (Rule) => Rule.required().integer().min(1),
+          },
+
+          {
+            name: 'numeroAlternativo',
+            type: 'object',
+            title: 'Numerazione Alternativa',
+            description:
+              'Per esempio la numerazione LXX/Vulgata dei Salmi.',
+
+            fields: [
+
+              {
+                name: 'sistema',
+                type: 'string',
+                title: 'Sistema',
+
+                options: {
+                  list: [
+                    {
+                      title: 'LXX / Vulgata',
+                      value: 'LXX_VG',
+                    },
+                    {
+                      title: 'Testo Masoretico',
+                      value: 'MT',
+                    },
+                    {
+                      title: 'Altro',
+                      value: 'ALTRO',
+                    },
+                  ],
+                },
+              },
+
+              {
+                name: 'numero',
+                type: 'number',
+                title: 'Numero Alternativo',
+              },
+
+            ],
+          },
+
+          {
+            name: 'edizione',
+            type: 'string',
+            title: 'Edizione / Fonte del Testo',
+            description:
+              'Identificazione editoriale del testo importato.',
+          },
+
+          {
+            name: 'lingua',
+            type: 'string',
+            title: 'Lingua',
+
+            options: {
+              list: [
+                {
+                  title: 'Italiano',
+                  value: 'it',
+                },
+                {
+                  title: 'Ebraico',
+                  value: 'he',
+                },
+                {
+                  title: 'Greco',
+                  value: 'grc',
+                },
+                {
+                  title: 'Latino',
+                  value: 'la',
+                },
+                {
+                  title: 'Aramaico',
+                  value: 'arc',
+                },
+              ],
+            },
+          },
+
+          {
+            name: 'tradizione',
+            type: 'string',
+            title: 'Tradizione / Testimone',
+            description:
+              'Per esempio traduzione italiana, MT, LXX, NT greco, Vulgata.',
+          },
+
+          {
+            name: 'diritti',
+            type: 'object',
+            title: 'Diritti e Licenza',
+
+            fields: [
+
+              {
+                name: 'testoProtetto',
+                type: 'boolean',
+                title: 'Testo Protetto',
+                initialValue: false,
+              },
+
+              {
+                name: 'noteProtette',
+                type: 'boolean',
+                title: 'Note Protette',
+                initialValue: true,
+              },
+
+              {
+                name: 'noteIncluse',
+                type: 'boolean',
+                title: 'Note Incluse',
+                initialValue: false,
+              },
+
+              {
+                name: 'nota',
+                type: 'text',
+                title: 'Nota sui Diritti',
+                rows: 3,
+              },
+
+            ],
+          },
+
+          {
+            name: 'versetti',
+            type: 'array',
+            title: 'Versetti',
+
+            of: [
+              {
+                type: 'object',
+                name: 'versettoBiblico',
+                title: 'Versetto',
+
+                fields: [
+
+                  {
+                    name: 'numero',
+                    type: 'number',
+                    title: 'Numero',
+                    validation: (Rule) =>
+                      Rule.required().integer().min(1),
+                  },
+
+                  {
+                    name: 'testo',
+                    type: 'text',
+                    title: 'Testo',
+                    rows: 3,
+                  },
+
+                  {
+                    name: 'metatesto',
+                    type: 'object',
+                    title: 'Metatesto / Superscrizione',
+                    description:
+                      'Per esempio: “Salmo. Di Davide.”. Nel Reader viene distinto graficamente dal testo.',
+
+                    fields: [
+
+                      {
+                        name: 'testo',
+                        type: 'text',
+                        title: 'Testo',
+                        rows: 2,
+                      },
+
+                      {
+                        name: 'stile',
+                        type: 'string',
+                        title: 'Stile',
+
+                        options: {
+                          list: [
+                            {
+                              title: 'Corsivo',
+                              value: 'corsivo',
+                            },
+                          ],
+                        },
+                      },
+
+                    ],
+                  },
+
+                  {
+                    name: 'marcatoreAlfabetico',
+                    type: 'string',
+                    title: 'Marcatore Alfabetico',
+                    description:
+                      'Per i salmi alfabetici: Alef, Bet, Ghimel, ecc.',
+                  },
+
+                  {
+                    name: 'statoTestuale',
+                    type: 'string',
+                    title: 'Stato Testuale',
+                    description:
+                      'Usato quando il versetto è segnalato dalla fonte ma il testo non è presente o richiede una qualificazione editoriale.',
+
+                    options: {
+                      list: [
+                        { title: 'Presente', value: 'presente' },
+                        { title: 'Omesso nell’edizione', value: 'omesso_nell_edizione' },
+                        { title: 'Lacunoso', value: 'lacunoso' },
+                        { title: 'Da verificare', value: 'da_verificare' },
+                      ],
+                    },
+                  },
+
+                  {
+                    name: 'notaEditoriale',
+                    type: 'text',
+                    title: 'Nota Editoriale',
+                    description:
+                      'Spiega omissioni, lacune o particolarità della numerazione senza alterare il testo biblico.',
+                    rows: 2,
+                  },
+
+                  {
+                    name: 'riferimentoAlternativo',
+                    type: 'object',
+                    title: 'Riferimento Alternativo',
+                    description:
+                      'Corrispondenza esplicita con un altro sistema di numerazione.',
+
+                    fields: [
+
+                      {
+                        name: 'sistema',
+                        type: 'string',
+                        title: 'Sistema',
+
+                        options: {
+                          list: [
+                            {
+                              title: 'LXX / Vulgata',
+                              value: 'LXX_VG',
+                            },
+                            {
+                              title: 'Testo Masoretico',
+                              value: 'MT',
+                            },
+                            {
+                              title: 'Altro',
+                              value: 'ALTRO',
+                            },
+                          ],
+                        },
+                      },
+
+                      {
+                        name: 'salmo',
+                        type: 'number',
+                        title: 'Salmo',
+                      },
+
+                      {
+                        name: 'capitolo',
+                        type: 'number',
+                        title: 'Capitolo',
+                      },
+
+                      {
+                        name: 'versetto',
+                        type: 'number',
+                        title: 'Versetto',
+                      },
+
+                    ],
+                  },
+
+                ],
+
+                preview: {
+                  select: {
+                    numero: 'numero',
+                    testo: 'testo',
+                    metatesto: 'metatesto.testo',
+                  },
+
+                  prepare({ numero, testo, metatesto }) {
+                    return {
+                      title: `Versetto ${numero}`,
+                      subtitle:
+                        testo ||
+                        metatesto ||
+                        'Versetto senza testo',
+                    }
+                  },
+                },
+              },
+            ],
+          },
+
+          {
+            name: 'importazione',
+            type: 'object',
+            title: 'Importazione',
+
+            fields: [
+
+              {
+                name: 'fonteFile',
+                type: 'string',
+                title: 'File Sorgente',
+              },
+
+              {
+                name: 'parser',
+                type: 'string',
+                title: 'Parser / Versione',
+              },
+
+              {
+                name: 'validato',
+                type: 'boolean',
+                title: 'Validato',
+              },
+
+            ],
+          },
+
         ],
+
+        preview: {
+          select: {
+            numero: 'numero',
+            titoloCapitolo: 'capitolo.titolo',
+            titoloLibro: 'libro.titolo',
+            edizione: 'edizione',
+            alternativo: 'numeroAlternativo.numero',
+          },
+
+          prepare({
+            numero,
+            titoloCapitolo,
+            titoloLibro,
+            edizione,
+            alternativo,
+          }) {
+            const isSalmi =
+              String(titoloLibro || '').toLowerCase() === 'salmi'
+
+            const prefisso = isSalmi
+              ? `Salmo ${numero}`
+              : `${titoloLibro || 'Capitolo'} ${numero}`
+
+            const titolo = titoloCapitolo
+              ? `${prefisso} — ${titoloCapitolo}`
+              : prefisso
+
+            const alt =
+              alternativo != null
+                ? `LXX/Vg ${alternativo}`
+                : null
+
+            return {
+              title: titolo,
+              subtitle: [alt, edizione || 'Testo biblico']
+                .filter(Boolean)
+                .join(' · '),
+            }
+          },
+        },
       },
 
       // ============================================================
@@ -1333,12 +2049,24 @@ export default defineConfig({
         title: 'Testimonianza Testuale',
 
         fields: [
-          {name: 'sigla', type: 'string', title: 'Sigla'},
-          {name: 'nome', type: 'string', title: 'Nome'},
+
+          {
+            name: 'sigla',
+            type: 'string',
+            title: 'Sigla',
+          },
+
+          {
+            name: 'nome',
+            type: 'string',
+            title: 'Nome',
+          },
+
           {
             name: 'tipo',
             type: 'string',
             title: 'Tipo',
+
             options: {
               list: [
                 'Manoscritto',
@@ -1348,31 +2076,68 @@ export default defineConfig({
               ],
             },
           },
-          {name: 'datazione', type: 'string', title: 'Datazione'},
-          {name: 'datazioneInizio', type: 'number', title: 'Anno Iniziale'},
-          {name: 'datazioneFine', type: 'number', title: 'Anno Finale'},
-          {name: 'descrizione', type: 'text', title: 'Descrizione'},
+
+          {
+            name: 'datazione',
+            type: 'string',
+            title: 'Datazione',
+          },
+
+          {
+            name: 'datazioneInizio',
+            type: 'number',
+            title: 'Anno Iniziale',
+          },
+
+          {
+            name: 'datazioneFine',
+            type: 'number',
+            title: 'Anno Finale',
+          },
+
+          {
+            name: 'descrizione',
+            type: 'text',
+            title: 'Descrizione',
+          },
+
           {
             name: 'rilevanza',
             type: 'text',
             title: 'Rilevanza per la Critica Testuale',
           },
+
           {
             name: 'bibliografia',
             type: 'array',
             title: 'Bibliografia',
+
             of: [
               {
                 type: 'object',
+
                 fields: [
-                  {name: 'citazione', type: 'text', title: 'Citazione'},
-                  {name: 'url', type: 'url', title: 'URL'},
+
+                  {
+                    name: 'citazione',
+                    type: 'text',
+                    title: 'Citazione',
+                  },
+
+                  {
+                    name: 'url',
+                    type: 'url',
+                    title: 'URL',
+                  },
+
                 ],
               },
             ],
           },
+
         ],
       },
+
     ],
   },
 })
