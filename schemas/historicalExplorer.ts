@@ -110,6 +110,7 @@ export const historicalExplorerSchemas = [
         options: {list: [
           {title: 'Evento', value: 'event'}, {title: 'Popolo', value: 'people'}, {title: 'Impero / potere', value: 'empire'},
           {title: 'Città', value: 'city'}, {title: 'Regione', value: 'region'}, {title: 'Persona', value: 'person'},
+          {title: 'Istituzione', value: 'institution'}, {title: 'Pratica', value: 'practice'},
           {title: 'Testo', value: 'text'}, {title: 'Redazione', value: 'redaction'}, {title: 'Testimone', value: 'witness'},
         ]},
       }),
