@@ -14,7 +14,7 @@ export const secondSamuelSeed = {
   bookRef: 'libro-2-samuele',
   defaultRange: {start: -1050, end: -400},
   quickYears: [-1000, -970, -900, -800, -586, -500],
-  sharedExternalEntityIds: ['david-samuel', 'philistines-iron-i'],
+  sharedEntities: [{id: 'david-samuel'}, {id: 'philistines-iron-i'}],
   scenarios: [
     {id: 'david-consolidation', start: -1010, end: -970, title: 'Consolidamento davidico', summary: 'La tradizione presenta Davide come sovrano capace di unificare Giuda e Israele e di conquistare Gerusalemme; estensione e scala storica del regno restano discusse.'},
     {id: 'jerusalem-capital', start: -1000, end: -900, title: 'Gerusalemme come capitale dinastica', summary: 'La città diviene centro politico e cultuale nella memoria davidica e nella successiva storia di Giuda.'},
