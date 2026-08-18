@@ -28,7 +28,7 @@ export const judgesSeed = {
   bookRef: 'libro-giudici',
   defaultRange: {start: -1200, end: -400},
   quickYears: [-1175, -1100, -1050, -1000, -800, -586, -500],
-  sharedExternalEntityIds: ['central-highlands-iron-i', 'early-israel-ethnogenesis'],
+  sharedEntities: [{id: 'central-highlands-iron-i'}, {id: 'early-israel-ethnogenesis'}],
   scenarios: [
     {id: 'iron-i-fragmentation', start: -1200, end: -1100, title: 'Ferro I · frammentazione regionale', summary: 'Nuovi insediamenti, crisi delle città del Tardo Bronzo e gruppi diversi convivono e competono nel Levante meridionale.'},
     {id: 'philistine-highland-competition', start: -1150, end: -1000, title: 'Filistei e società degli altopiani', summary: 'Le città filistee della costa e i gruppi degli altopiani rappresentano poli differenti del nuovo assetto del Ferro I.'},
