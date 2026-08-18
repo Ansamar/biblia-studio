@@ -14,7 +14,7 @@ export const firstSamuelSeed = {
   bookRef: 'libro-1-samuele',
   defaultRange: {start: -1150, end: -400},
   quickYears: [-1100, -1050, -1000, -950, -800, -586, -500],
-  sharedExternalEntityIds: ['philistines-iron-i', 'philistine-pentapolis'],
+  sharedEntities: [{id: 'philistines-iron-i'}, {id: 'philistine-pentapolis'}],
   scenarios: [
     {id: 'shiloh-philistine-pressure', start: -1150, end: -1050, title: 'Santuario, Filistei e crisi regionale', summary: 'Il mondo di 1Sam si apre in un paesaggio di santuari locali e crescente pressione filistea, nel passaggio dal Ferro I verso nuove forme politiche.'},
     {id: 'saul-state-formation', start: -1050, end: -1000, title: 'Saul e formazione monarchica', summary: 'La monarchia emerge come risposta a trasformazioni militari e politiche; l’estensione e natura del regno di Saul restano oggetto di ricostruzione.'},
