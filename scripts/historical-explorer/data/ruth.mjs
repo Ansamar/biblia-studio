@@ -29,7 +29,7 @@ export const ruthSeed = {
   bookRef: 'libro-rut',
   defaultRange: {start: -1000, end: -350},
   quickYears: [-900, -800, -700, -586, -539, -450, -400],
-  sharedExternalEntityIds: ['moab-kingdom'],
+  sharedEntities: [{id: 'moab-kingdom'}],
   scenarios: [
     {id: 'iron-age-moab-judah', start: -1000, end: -700, title: 'Moab e Giuda nell’età del Ferro', summary: 'Moab e Giuda sono realtà storiche del Levante dell’età del Ferro. Il racconto di Rut usa questo mondo come scenario, ma non è datato automaticamente a quel periodo.'},
     {id: 'davidic-memory-ruth', start: -900, end: -600, title: 'Memoria davidica e genealogia', summary: 'La genealogia finale collega Rut a Davide; alcuni modelli interpretano il libro in relazione alla legittimazione o memoria della dinastia davidica.'},
