@@ -1,0 +1,22 @@
+import {biblicalRef as ref, source} from '../lib/build-dataset.mjs'
+
+const MACC2 = source('secondary','Michael W. Duggan · 2 Maccabees',{citation:'Michael W. Duggan, “2 Maccabees,” The Oxford Handbook of the Apocrypha, 2021.',url:'https://academic.oup.com/edited-volume/33426/chapter-abstract/290246278'})
+const GOFF2 = source('secondary','Matthew Goff · 2 Maccabees',{citation:'Matthew Goff, “Dying for Judaism Prompts God’s Mercy: 2 Maccabees,” The Apocrypha: A Guide, 2024.',url:'https://academic.oup.com/book/57955/chapter-abstract/475817334'})
+
+export const secondMaccabeesSeed = {
+  datasetId:'2-maccabei-history',title:'2 Maccabei · storia intorno al testo',
+  subtitle:'Tempio, ellenizzazione, martirio, Giuda Maccabeo e memoria liturgica della ridedicazione sono esplorati come interpretazione teologica della stessa crisi storica narrata diversamente da 1 Maccabei.',
+  bookRef:'libro-2-maccabei',defaultRange:{start:-180,end:-150},quickYears:[-176,-175,-168,-167,-164,-161],
+  sharedEntities:[{id:'seleucid-empire-macc'},{id:'antiochus-iv-macc'},{id:'judas-maccabeus'},{id:'jerusalem-temple-macc'}],
+  scenarios:[
+    {id:'jerusalem-hellenization',start:-180,end:-168,title:'Gerusalemme e conflitto sull’ellenizzazione',summary:'La crisi nasce anche da conflitti sacerdotali e progetti di trasformazione della polis di Gerusalemme.'},
+    {id:'martyrdom-resistance',start:-168,end:-164,title:'Persecuzione, martirio e resistenza',summary:'Il libro interpreta la sofferenza dei martiri come fedeltà capace di concorrere teologicamente alla liberazione.'},
+    {id:'temple-restoration',start:-164,end:-161,title:'Ridedicazione e vittoria',summary:'Giuda Maccabeo ristabilisce il tempio; il racconto concentra il proprio arco su Gerusalemme e sul culto.'}
+  ],
+  entities:[
+    {id:'jerusalem-hellenization-2macc',type:'institution',label:'Ellenizzazione di Gerusalemme',summary:'2 Maccabei descrive la trasformazione della città, conflitti sacerdotali e istituzioni greche come parte della crisi precedente alla persecuzione.',temporal:{start:-180,end:-168,precision:'range'},spatial:{point:{lat:31.778,lng:35.235},region:'Gerusalemme'},epistemicStatus:'attested',biblicalRefs:[ref('2Mac 3–5','2-maccabei',3,5)],relations:[{targetId:'seleucid-empire-macc',kind:'context',label:'Inserita nel mondo politico seleucide'},{targetId:'jerusalem-temple-macc',kind:'interaction',label:'Conflitti sul tempio e sul sommo sacerdozio'}],sources:[MACC2,GOFF2]},
+    {id:'martyrs-2macc',type:'event',label:'Martiri di 2 Maccabei',summary:'Eleazaro e la madre con i sette figli incarnano la resistenza non armata e una teologia della fedeltà, della morte e della speranza nella risurrezione.',temporal:{start:-168,end:-164,precision:'range'},spatial:{region:'Giudea nella narrazione'},epistemicStatus:'memory',biblicalRefs:[ref('2Mac 6–7','2-maccabei',6,7)],relations:[{targetId:'judas-maccabeus',kind:'memory',label:'Il racconto collega martirio e successiva liberazione militare'}],sources:[MACC2,GOFF2]},
+    {id:'hanukkah-2macc',type:'practice',label:'Ridedicazione del tempio e Hanukkah',summary:'2 Maccabei collega la restaurazione del tempio alla celebrazione annuale e indirizza esplicitamente la memoria anche alla diaspora egiziana.',temporal:{start:-164,end:-160,precision:'range'},spatial:{point:{lat:31.778,lng:35.235},region:'Gerusalemme e diaspora'},epistemicStatus:'attested',biblicalRefs:[ref('2Mac 10','2-maccabei',10)],relations:[{targetId:'jerusalem-temple-macc',kind:'memory',label:'Memoria liturgica della ridedicazione'},{targetId:'judas-maccabeus',kind:'interaction',label:'Giuda come protagonista della restaurazione'}],sources:[MACC2,GOFF2]},
+    {id:'second-maccabees-composition',type:'redaction',label:'Composizione di 2 Maccabei',summary:'Il libro è un’epitome di un’opera attribuita a Giasone di Cirene, preceduta da lettere e costruita con forte retorica ellenistica e finalità teologica.',temporal:{start:-124,end:-50,precision:'range'},spatial:{region:'Giudaismo ellenistico e diaspora; provenienza discussa'},epistemicStatus:'probable',biblicalRefs:[ref('2 Maccabei','2-maccabei')],relations:[{targetId:'martyrs-2macc',kind:'composition',label:'Integra il martirio nella teologia della storia'},{targetId:'hanukkah-2macc',kind:'composition',label:'Promuove la memoria della ridedicazione'}],sources:[MACC2,GOFF2]}
+  ],areas:[],noteEditoriali:'2 Maccabei non è trattato come duplicato di 1 Maccabei: condivide eventi e protagonisti, ma li interpreta con una teologia, una selezione e una retorica differenti.'
+}
