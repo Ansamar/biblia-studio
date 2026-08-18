@@ -1,0 +1,21 @@
+import {biblicalRef as ref, source} from '../lib/build-dataset.mjs'
+
+const JUDITH = source('secondary','Deborah Levine Gera · The Book of Judith',{citation:'Deborah Levine Gera, “The Book of Judith,” The Oxford Handbook of the Apocrypha, 2021.',url:'https://academic.oup.com/edited-volume/33426/chapter/290244502'})
+const OBO = source('bibliography','Lawrence Wills · Book of Judith',{citation:'Lawrence Wills, “Book of Judith,” Oxford Bibliographies in Biblical Studies, 2017.',url:'https://academic.oup.com/reference/62341/reference-article-abstract/554095664'})
+
+export const judithSeed = {
+  datasetId:'giuditta-history',title:'Giuditta · storia intorno al testo',
+  subtitle:'Imperi, geografia volutamente composita, assedio, identità giudaica e costruzione didattica sono esplorati senza trasformare il racconto in cronaca.',
+  bookRef:'libro-giuditta',defaultRange:{start:-650,end:-100},quickYears:[-612,-539,-400,-300,-200,-150],
+  scenarios:[
+    {id:'imperial-memory-judith',start:-650,end:-400,title:'Memoria degli imperi',summary:'Il racconto combina nomi, poteri e geografie di epoche diverse; questa incongruenza è parte della sua costruzione letteraria.'},
+    {id:'hellenistic-identity-judith',start:-300,end:-100,title:'Identità giudaica in età ellenistica',summary:'Molti studi collocano la composizione nel giudaismo ellenistico, dove fedeltà, tempio e resistenza all’oppressione diventano temi centrali.'}
+  ],
+  entities:[
+    {id:'nebucadrezzar-assyrian-judith',type:'person',label:'“Nabucodònosor re degli Assiri”',summary:'La formula iniziale fonde deliberatamente il re babilonese Nabucodonosor II con l’Assiria e segnala che il racconto non segue una cronologia imperiale ordinaria.',temporal:{precision:'unknown'},epistemicStatus:'narrative',biblicalRefs:[ref('Gdt 1','giuditta',1)],relations:[{targetId:'judith-imperial-collage',kind:'composition',label:'Elemento della geografia e cronologia composite'}],sources:[JUDITH,OBO]},
+    {id:'judith-imperial-collage',type:'text',label:'Geografia e imperi compositi',summary:'Toponimi, titoli e poteri appartengono a quadri storici differenti. Historical Explorer visualizza la discordanza invece di correggerla silenziosamente.',temporal:{precision:'unknown'},epistemicStatus:'narrative',biblicalRefs:[ref('Gdt 1–7','giuditta',1,7)],relations:[{targetId:'bethulia-judith',kind:'memory',label:'Betulia appartiene alla geografia narrativa'}],sources:[JUDITH,OBO]},
+    {id:'bethulia-judith',type:'city',label:'Betulia · città narrativa',summary:'La localizzazione di Betulia non è identificata con certezza. Il luogo funziona come porta strategica verso Gerusalemme nella logica del racconto.',temporal:{precision:'unknown'},spatial:{region:'Montagne della Giudea / Samaria nella geografia narrativa'},epistemicStatus:'narrative',biblicalRefs:[ref('Gdt 4–13','giuditta',4,13)],relations:[{targetId:'judith-heroine',kind:'context',label:'Scenario della resistenza di Giuditta'}],sources:[JUDITH]},
+    {id:'judith-heroine',type:'person',label:'Giuditta',summary:'Vedova pia e protagonista del racconto, costruita come figura esemplare di fedeltà, coraggio e inversione del potere.',temporal:{precision:'unknown'},epistemicStatus:'narrative',biblicalRefs:[ref('Gdt 8–16','giuditta',8,16)],relations:[{targetId:'bethulia-judith',kind:'context',label:'Opera per la salvezza della città'},{targetId:'judith-formation',kind:'composition',label:'Figura centrale della finalità didattica'}],sources:[JUDITH,OBO]},
+    {id:'judith-formation',type:'redaction',label:'Composizione e genere di Giuditta',summary:'Il libro è spesso studiato come storia didattica, racconto parabolico o novella storicizzante; datazione e lingua originale restano discusse.',temporal:{start:-250,end:-100,precision:'range'},spatial:{region:'Giudaismo ellenistico; provenienza discussa'},epistemicStatus:'debated',biblicalRefs:[ref('Giuditta','giuditta')],relations:[{targetId:'judith-imperial-collage',kind:'composition',label:'Usa anacronismi e geografia composita'},{targetId:'judith-heroine',kind:'composition',label:'Costruisce una protagonista esemplare'}],sources:[JUDITH,OBO]}
+  ],areas:[],noteEditoriali:'Giuditta rende visibile l’incoerenza storica del racconto come dato letterario, non come errore da mascherare.'
+}
