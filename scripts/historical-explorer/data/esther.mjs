@@ -1,0 +1,22 @@
+import {biblicalRef as ref, source} from '../lib/build-dataset.mjs'
+
+const ESTHER = source('bibliography','Jill Middlemas · Esther and Additions to Esther',{citation:'Jill Middlemas, “Esther and Additions to Esther,” Oxford Bibliographies in Biblical Studies, 2012.',url:'https://academic.oup.com/reference/62341/reference-article-abstract/554105986'})
+const GREEK = source('secondary','Smith · de Troyer · Greek Esther',{citation:'Tyler Smith and Kristin de Troyer, “The Additions of the Greek Book(s) of Esther,” The Oxford Handbook of the Apocrypha, 2021.',url:'https://academic.oup.com/edited-volume/33426/chapter-abstract/290252670'})
+
+export const estherSeed = {
+  datasetId:'ester-history',title:'Ester · storia intorno al testo',
+  subtitle:'Corte persiana, diaspora, Purim e pluralità testuale ebraico-greca sono esplorati distinguendo contesto persiano, racconto di corte e riscritture ellenistiche.',
+  bookRef:'libro-ester',defaultRange:{start:-520,end:-100},quickYears:[-486,-465,-400,-300,-200,-150],
+  scenarios:[
+    {id:'achaemenid-court-esther',start:-500,end:-450,title:'Immaginario della corte achemenide',summary:'Il racconto usa un ambiente persiano riconoscibile, ma la sua corrispondenza con un singolo episodio storico resta problematica.'},
+    {id:'purim-esther',start:-400,end:-200,title:'Diaspora e memoria di Purim',summary:'Il libro lega la salvezza dei Giudei alla celebrazione di Purim e costruisce una memoria comunitaria della diaspora.'},
+    {id:'greek-esther',start:-250,end:-100,title:'Ester nelle tradizioni greche',summary:'Old Greek, Alpha Text e Addizioni ampliano e reinterpretano la storia e rendono visibile una storia testuale plurale.'}
+  ],
+  entities:[
+    {id:'persian-court-esther',type:'institution',label:'Corte persiana di Ester',summary:'Banchetti, decreti, eunuchi e gerarchie imperiali costruiscono un ambiente di corte persiano plausibile sul piano culturale, senza garantire storicità puntuale.',temporal:{start:-500,end:-450,precision:'range'},spatial:{point:{lat:32.19,lng:48.26},region:'Susa / impero achemenide nella narrazione'},epistemicStatus:'comparandum',biblicalRefs:[ref('Est 1–8','ester',1,8)],relations:[{targetId:'esther-diaspora',kind:'context',label:'Ambiente politico della comunità giudaica narrata'}],sources:[ESTHER]},
+    {id:'esther-diaspora',type:'people',label:'Giudei nella diaspora persiana · racconto',summary:'Il libro immagina una comunità giudaica diffusa nell’impero e vulnerabile a decreti imperiali. Il quadro è utile per pensare identità diasporiche, non per ricostruire un censimento storico.',temporal:{precision:'unknown'},spatial:{region:'Impero persiano nella narrazione'},epistemicStatus:'narrative',biblicalRefs:[ref('Est 2–9','ester',2,9)],relations:[{targetId:'purim-esther',kind:'memory',label:'La salvezza viene ritualizzata in Purim'}],sources:[ESTHER]},
+    {id:'purim-esther',type:'practice',label:'Purim',summary:'Ester offre un’eziologia narrativa della festa di Purim. Origine storica, sviluppo e rapporto con la forma letteraria del libro restano discussi.',temporal:{precision:'unknown'},epistemicStatus:'memory',biblicalRefs:[ref('Est 9','ester',9)],relations:[{targetId:'esther-formation',kind:'composition',label:'La festa è una delle chiavi della finalità del libro'}],sources:[ESTHER]},
+    {id:'greek-esther-traditions',type:'witness',label:'Ester greco · Old Greek, Alpha Text e Addizioni',summary:'Le tradizioni greche non sono una semplice traduzione del testo masoretico: presentano riscritture e Addizioni con una complessa storia testuale.',temporal:{start:-250,end:-100,precision:'range'},epistemicStatus:'attested',biblicalRefs:[ref('Ester','ester')],relations:[{targetId:'esther-formation',kind:'transmission',label:'Testimonia la pluriformità della tradizione di Ester'}],sources:[GREEK,ESTHER]},
+    {id:'esther-formation',type:'redaction',label:'Formazione e trasmissione di Ester',summary:'Il rapporto fra Ester ebraico, Old Greek, Alpha Text e Addizioni mostra una tradizione viva e plurale; Historical Explorer evita di ridurre il libro a un solo momento compositivo.',temporal:{start:-400,end:-100,precision:'range'},epistemicStatus:'debated',biblicalRefs:[ref('Ester','ester')],relations:[{targetId:'greek-esther-traditions',kind:'transmission',label:'Pluralità testuale greca'},{targetId:'purim-esther',kind:'composition',label:'Legame con la memoria festiva'}],sources:[ESTHER,GREEK]}
+  ],areas:[],noteEditoriali:'Ester distingue contesto persiano plausibile, storicità dell’intreccio e trasmissione ebraico-greca.'
+}
