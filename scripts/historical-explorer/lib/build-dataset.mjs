@@ -2,6 +2,23 @@ const entityDocId = (id) => `historical-entity-${id}`
 const areaDocId = (id) => `historical-area-${id}`
 const key = (prefix, index) => `${prefix}-${index + 1}`
 
+const canonicalEntityType = (type) => ({
+  concept: 'text',
+  tradition: 'text',
+  community: 'people',
+  polity: 'empire',
+  context: 'region',
+}[type] || type)
+
+const canonicalEpistemicStatus = (status) => ({
+  literary: 'narrative',
+}[status] || status)
+
+const canonicalRelationKind = (kind) => ({
+  comparison: 'memory',
+  reception: 'transmission',
+}[kind] || kind)
+
 export function source(kind, label, options = {}) {
   return {
     _type: 'historicalSource',
@@ -107,7 +124,7 @@ export function buildHistoricalExplorerDocuments(seed) {
     _id: entityDocId(entity.id),
     _type: 'historicalEntity',
     id: entity.id,
-    type: entity.type,
+    type: canonicalEntityType(entity.type),
     label: entity.label,
     summary: entity.summary,
     temporal: {_type: 'object', ...entity.temporal},
@@ -118,12 +135,12 @@ export function buildHistoricalExplorerDocuments(seed) {
           ...(entity.spatial.point ? {point: {_type: 'geopoint', ...entity.spatial.point}} : {}),
         }
       : undefined,
-    epistemicStatus: entity.epistemicStatus,
+    epistemicStatus: canonicalEpistemicStatus(entity.epistemicStatus),
     biblicalRefs: keyed(entity.biblicalRefs, `${entity.id}-bib`).map((item) => ({...item, _type: 'historicalBiblicalReference'})),
     relations: keyed(entity.relations, `${entity.id}-rel`).map((relation) => ({
       _type: 'historicalRelation',
       _key: relation._key,
-      kind: relation.kind,
+      kind: canonicalRelationKind(relation.kind),
       label: relation.label,
       target: {_type: 'reference', _ref: refForEntityId(relation.targetId)},
     })),
