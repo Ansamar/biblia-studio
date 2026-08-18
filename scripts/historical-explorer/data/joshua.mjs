@@ -31,7 +31,7 @@ export const joshuaSeed = {
   bookRef: 'libro-giosue',
   defaultRange: {start: -1300, end: -400},
   quickYears: [-1250, -1208, -1150, -1000, -722, -586, -500],
-  sharedExternalEntityIds: ['israel-merneptah'],
+  sharedEntities: [{id: 'israel-merneptah'}],
   scenarios: [
     {id: 'late-bronze-canaan', start: -1300, end: -1200, title: 'Canaan del Tardo Bronzo', summary: 'Città-stato cananee e controllo egiziano definiscono il contesto regionale; il racconto di conquista non coincide automaticamente con una singola campagna archeologicamente documentabile.'},
     {id: 'iron-i-emergence', start: -1200, end: -1000, title: 'Ferro I · nuovi insediamenti e identità', summary: 'La trasformazione degli altopiani centrali e l’emergere di gruppi identificabili come proto-israeliti sono studiati come processo complesso di etnogenesi.'},
