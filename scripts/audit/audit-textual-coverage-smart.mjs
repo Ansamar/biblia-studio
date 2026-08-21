@@ -17,7 +17,7 @@ for (const t of texts) {
 const keyOf = (t) => `${t.lingua || '∅'}|${t.tradizione || '∅'}|${t.edizione || '∅'}`
 const range = (start, end) => Array.from({length: end - start + 1}, (_, i) => start + i)
 
-// Regole esplicite solo per tradizioni la cui estensione non coincide con il
+// Regole esplicite per tradizioni la cui estensione non coincide con il
 // numero di capitoli del canone CEI usato dal documento libro.
 const expectedCoverage = ({book, lingua, tradizione}) => {
   if (book._id === 'libro-daniele' && lingua === 'Ebraico' && tradizione === 'mt') {
@@ -26,11 +26,8 @@ const expectedCoverage = ({book, lingua, tradizione}) => {
   if (book._id === 'libro-baruc' && lingua === 'Greco' && tradizione === 'greco') {
     return {chapters: range(1, 5), reason: 'Nel modello editoriale corrente Baruc 6 / Lettera di Geremia è trattato separatamente dalla variante greca Baruc 1–5.'}
   }
-  // Alias legacy di Giosuè: dopo la normalizzazione lxx_joshua_a è la variante
-  // canonica completa 1–24. La vecchia variante lxx 1–19 non è una seconda
-  // edizione da completare e non deve produrre un falso warning.
   if (book._id === 'libro-giosue' && lingua === 'Greco' && tradizione === 'lxx') {
-    return {chapters: null, reason: 'Alias legacy; la variante editoriale attiva è lxx_joshua_a.'}
+    return {chapters: null, reason: 'Alias legacy; la variante editoriale attiva e completa è lxx_joshua_a.'}
   }
   return {chapters: range(1, book.capitoli), reason: null}
 }
@@ -62,7 +59,15 @@ for (const book of books) {
     }
 
     if (expected.chapters === null) {
-      notes.push(`${book.titolo}: [${variant}] ignorata per copertura — ${expected.reason}`)
+      notes.push(`${book.titolo}: [${variant}] esclusa dal gate di copertura — ${expected.reason}`)
+      continue
+    }
+
+    // Una variante/testimone che copre meno di metà dell'estensione attesa è
+    // trattata come testimone parziale, non come promessa editoriale di libro completo.
+    const threshold = Math.max(2, Math.floor(expected.chapters.length * 0.5))
+    if (present.size < threshold) {
+      notes.push(`${book.titolo}: [${variant}] testimone parziale ${present.size}/${expected.chapters.length}; non valutato come copertura completa.`)
       continue
     }
 
