@@ -6,7 +6,10 @@ const result = await client.fetch(`{
   "allIds": *[]{_id,_type},
   "books": *[_type == "libro"]{_id,titolo,ordine,capitoli},
   "chapters": *[_type == "capitolo"]{_id,numero,titolo,"bookRef":libro._ref,"bookExists":defined(libro->._id)},
-  "biblicalText": *[_type == "testoBiblicoCapitolo"]{_id,numero,"bookRef":libro._ref,"bookExists":defined(libro->._id),"verseCount":count(versetti)},
+  "biblicalText": *[_type == "testoBiblicoCapitolo"]{
+    _id,numero,edizione,lingua,tradizione,
+    "bookRef":libro._ref,"bookExists":defined(libro->._id),"verseCount":count(versetti)
+  },
   "datasets": *[_type == "historicalExplorerDataset"]{
     _id,id,title,"bookRef":book._ref,"bookExists":defined(book->._id),
     "entityRefs":entities[]._ref,"brokenEntityRefs":count(entities[!defined(@->._id)]),
@@ -32,8 +35,8 @@ const notes = []
 const addIssue = (msg) => issues.push(msg)
 const addWarning = (msg) => warnings.push(msg)
 const isNum = (v) => typeof v === 'number' && Number.isFinite(v)
+const clean = (v) => typeof v === 'string' && v.trim() ? v.trim() : '∅'
 
-// --- Corpus canonico ---
 if (result.books.length !== 73) addIssue(`Libri canonici: attesi 73, trovati ${result.books.length}`)
 
 const booksById = new Map(result.books.map((b) => [b._id,b]))
@@ -69,25 +72,49 @@ for (const b of result.books) {
   if (isNum(b.capitoli)) for (let n=1;n<=b.capitoli;n++) if (!seen.has(n)) addIssue(`Libro ${b.titolo}: capitolo ${n} mancante`)
 }
 
+// Testi biblici: più documenti per capitolo sono attesi quando rappresentano
+// edizioni/lingue/tradizioni differenti. Un duplicato reale coincide su tutte
+// le dimensioni identificative sotto.
 const textByBook = new Map()
 for (const t of result.biblicalText) {
   if (!t.bookExists) addIssue(`Testo biblico ${t._id}: reference libro rotta (${t.bookRef || 'mancante'})`)
   if (!isNum(t.numero) || t.numero < 1) addIssue(`Testo biblico ${t._id}: numero capitolo non valido (${t.numero})`)
   if (!isNum(t.verseCount) || t.verseCount < 1) addWarning(`Testo biblico ${t._id}: nessun versetto`)
-  if (t.bookRef) {
-    if (!textByBook.has(t.bookRef)) textByBook.set(t.bookRef,[])
-    textByBook.get(t.bookRef).push(t)
-  }
-}
-for (const b of result.books) {
-  const docs = textByBook.get(b._id) || []
-  if (docs.length && isNum(b.capitoli) && docs.length !== b.capitoli) addWarning(`Libro ${b.titolo}: testi capitolo ${docs.length}/${b.capitoli}`)
-  const nums = new Map()
-  for (const t of docs) nums.set(t.numero,(nums.get(t.numero)||0)+1)
-  for (const [n,count] of nums) if (count > 1) addIssue(`Libro ${b.titolo}: testo capitolo duplicato n. ${n} (${count} documenti)`)
+  if (!t.bookRef) continue
+  if (!textByBook.has(t.bookRef)) textByBook.set(t.bookRef,[])
+  textByBook.get(t.bookRef).push(t)
 }
 
-// --- Historical Explorer ---
+for (const b of result.books) {
+  const docs = textByBook.get(b._id) || []
+  const variants = new Map()
+  for (const t of docs) {
+    const variant = `${clean(t.lingua)}|${clean(t.tradizione)}|${clean(t.edizione)}`
+    if (!variants.has(variant)) variants.set(variant, [])
+    variants.get(variant).push(t)
+  }
+
+  for (const [variant, variantDocs] of variants) {
+    const byChapter = new Map()
+    for (const t of variantDocs) {
+      if (!byChapter.has(t.numero)) byChapter.set(t.numero, [])
+      byChapter.get(t.numero).push(t._id)
+    }
+    for (const [n, ids] of byChapter) {
+      if (ids.length > 1) addIssue(`Libro ${b.titolo}: duplicato reale testo cap. ${n} [${variant}] → ${ids.join(', ')}`)
+    }
+
+    if (isNum(b.capitoli)) {
+      const covered = new Set(variantDocs.map((t) => t.numero).filter(isNum))
+      const missing = []
+      for (let n=1;n<=b.capitoli;n++) if (!covered.has(n)) missing.push(n)
+      if (missing.length && covered.size >= Math.max(2, Math.floor(b.capitoli * 0.5))) {
+        addWarning(`Libro ${b.titolo}: variante [${variant}] copertura ${covered.size}/${b.capitoli}; mancanti ${missing.slice(0,12).join(', ')}${missing.length > 12 ? '…' : ''}`)
+      }
+    }
+  }
+}
+
 const datasetsByBook = new Map()
 for (const d of result.datasets) {
   if (!d.id) addIssue(`Dataset ${d._id}: id stabile mancante`)
