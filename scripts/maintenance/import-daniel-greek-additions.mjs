@@ -1,0 +1,130 @@
+import {getCliClient} from 'sanity/cli'
+
+const client = getCliClient({apiVersion: '2025-08-15'})
+const commit = process.argv.includes('--commit')
+
+const targets = [
+  {chapter:13, tradition:'daniele_greco_og', book:'susanna', witness:'Old Greek · Susanna'},
+  {chapter:13, tradition:'daniele_teodozione', book:'susanna-theodotion', witness:'Teodozione · Susanna'},
+  {chapter:14, tradition:'daniele_greco_og', book:'bel-and-the-dragon', witness:'Old Greek · Bel e il Drago'},
+  {chapter:14, tradition:'daniele_teodozione', book:'bel-and-the-dragon-theodotion', witness:'Teodozione · Bel e il Drago'},
+]
+
+const templates = await client.fetch(`*[_type == "testoBiblicoCapitolo" && libro._ref == "libro-daniele" && tradizione in ["daniele_greco_og","daniele_teodozione"]]|order(numero asc){
+  ...,
+  "chapterRef":capitolo._ref,
+  "bookRef":libro._ref
+}`)
+
+const templateByTradition = new Map()
+for (const t of templates) if (!templateByTradition.has(t.tradizione)) templateByTradition.set(t.tradizione, t)
+for (const tradition of ['daniele_greco_og','daniele_teodozione']) {
+  if (!templateByTradition.has(tradition)) throw new Error(`Template mancante per ${tradition}`)
+}
+
+const chapters = await client.fetch(`*[_type == "capitolo" && libro._ref == "libro-daniele" && numero in [13,14]]{_id,numero}`)
+const chapterByNumber = new Map(chapters.map((c) => [c.numero, c._id]))
+if (!chapterByNumber.has(13) || !chapterByNumber.has(14)) throw new Error('Capitoli Sanity 13–14 di Daniele non risolti correttamente.')
+
+const targetIds = targets.map(({chapter, tradition}) => `testo-daniele-${tradition.replaceAll('_','-')}-dan-${chapter}`)
+const existing = await client.fetch(`*[_id in $ids]{_id,numero,tradizione}`, {ids: targetIds})
+if (existing.length) throw new Error(`Target già esistenti: ${existing.map((d) => d._id).join(', ')}`)
+
+const stripSystem = (doc) => {
+  const out = {...doc}
+  for (const k of ['_id','_rev','_createdAt','_updatedAt','chapterRef','bookRef','numero','capitolo','versetti']) delete out[k]
+  return out
+}
+
+const describeMeta = (t) => ({
+  lingua:t.lingua,
+  tradizione:t.tradizione,
+  edizione:t.edizione,
+  direzione:t.direzione,
+  diritti:t.diritti,
+  siglaSorgente:t.siglaSorgente,
+  testimone:t.testimone,
+  importazione:t.importazione,
+})
+
+console.log('\n=== IMPORT DANIELE GRECO 13–14 ===')
+console.log(`Project: ${client.config().projectId}`)
+console.log(`Dataset: ${client.config().dataset}`)
+console.log(`Modalità: ${commit ? 'COMMIT' : 'DRY RUN'}`)
+console.log('\n=== METADATI TEMPLATE ===')
+for (const tradition of ['daniele_greco_og','daniele_teodozione']) {
+  console.log(`${tradition}: ${JSON.stringify(describeMeta(templateByTradition.get(tradition)))}`)
+}
+
+const docs = []
+for (const target of targets) {
+  const template = templateByTradition.get(target.tradition)
+  const url = `https://openscriptorium.org/api/v1/works/swete-lxx/${target.book}/1`
+  const res = await fetch(url, {headers:{accept:'application/json'}})
+  if (!res.ok) throw new Error(`${target.witness}: HTTP ${res.status}`)
+  const data = await res.json()
+  const verses = Array.isArray(data.verses) ? data.verses : []
+  if (!verses.length) throw new Error(`${target.witness}: nessun versetto ricevuto`)
+
+  const verseType = template.versetti?.[0]?._type || 'object'
+  const mappedVerses = verses.map((v, i) => {
+    const n = Number(v?.hierarchy?.[1] ?? i + 1)
+    if (!Number.isFinite(n) || typeof v?.body !== 'string' || !v.body.trim()) throw new Error(`${target.witness}: versetto non valido in posizione ${i + 1}`)
+    return {_key:`dan-${target.chapter}-${target.tradition}-${n}`,_type:verseType,numero:n,testo:v.body}
+  })
+
+  const id = `testo-daniele-${target.tradition.replaceAll('_','-')}-dan-${target.chapter}`
+  const base = stripSystem(template)
+  const provenance = {
+    provider:'Open Scriptorium',
+    work:'Swete LXX',
+    sourceBook:target.book,
+    endpoint:url,
+    license:data.license || null,
+    note:'Henry Barclay Swete, The Old Testament in Greek According to the Septuagint; Open Greek and Latin digitization via Open Scriptorium.',
+  }
+
+  const doc = {
+    ...base,
+    _id:id,
+    _type:'testoBiblicoCapitolo',
+    libro:{_type:'reference',_ref:'libro-daniele'},
+    capitolo:{_type:'reference',_ref:chapterByNumber.get(target.chapter)},
+    numero:target.chapter,
+    lingua:'Greco',
+    tradizione:target.tradition,
+    edizione:template.edizione,
+    direzione:template.direzione || 'ltr',
+    versetti:mappedVerses,
+    // Manteniamo i campi editoriali già usati dalla variante e aggiungiamo
+    // una provenance esplicita non distruttiva per questa importazione.
+    siglaSorgente:'Swete LXX · Open Scriptorium',
+    testimone:target.witness,
+    provenienzaImportazione:provenance,
+  }
+  docs.push(doc)
+
+  console.log(`\n${target.witness} → Dn ${target.chapter}`)
+  console.log(`ID: ${id}`)
+  console.log(`Versetti: ${mappedVerses.length}`)
+  console.log(`Primo: ${mappedVerses[0].numero} · ${mappedVerses[0].testo.slice(0,90)}`)
+  console.log(`Ultimo: ${mappedVerses.at(-1).numero} · ${mappedVerses.at(-1).testo.slice(0,90)}`)
+  console.log(`Licenza API: ${JSON.stringify(data.license || null)}`)
+}
+
+console.log('\nPiano: 4 documenti nuovi; nessun documento esistente viene modificato.')
+if (!commit) {
+  console.log('Nessuna mutazione eseguita. Aggiungere -- --commit per scrivere.')
+  process.exit(0)
+}
+
+let tx = client.transaction()
+for (const doc of docs) tx = tx.create(doc)
+const result = await tx.commit()
+console.log(`\n✓ Scritti ${docs.length} documenti greci per Daniele 13–14.`)
+console.log(`Transaction: ${result.transactionId || 'n/d'}`)
+
+const verify = await client.fetch(`*[_id in $ids]{_id,numero,tradizione,"verseCount":count(versetti)}|order(tradizione asc, numero asc)`, {ids:targetIds})
+if (verify.length !== 4) throw new Error(`Verifica fallita: attesi 4 documenti, trovati ${verify.length}`)
+console.log('Verifica:')
+for (const d of verify) console.log(`- ${d._id} · cap ${d.numero} · ${d.tradizione} · vv=${d.verseCount}`)
