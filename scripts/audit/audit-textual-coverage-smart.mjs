@@ -29,6 +29,9 @@ const expectedCoverage = ({book, lingua, tradizione}) => {
   if (book._id === 'libro-giosue' && lingua === 'Greco' && tradizione === 'lxx') {
     return {chapters: null, reason: 'Alias legacy; la variante editoriale attiva e completa è lxx_joshua_a.'}
   }
+  if (book._id === 'libro-salmi' && lingua === 'Greco' && tradizione === 'lxx') {
+    return {chapters: range(1, 151), reason: 'La tradizione greca LXX include il Salmo 151, oltre ai 150 salmi del canone/numerazione CEI.'}
+  }
   return {chapters: range(1, book.capitoli), reason: null}
 }
 
@@ -65,7 +68,8 @@ for (const book of books) {
 
     // Una variante/testimone che copre meno di metà dell'estensione attesa è
     // trattata come testimone parziale, non come promessa editoriale di libro completo.
-    const threshold = Math.max(2, Math.floor(expected.chapters.length * 0.5))
+    // Per i libri di un solo capitolo, 1/1 è naturalmente copertura completa.
+    const threshold = Math.max(1, Math.floor(expected.chapters.length * 0.5))
     if (present.size < threshold) {
       notes.push(`${book.titolo}: [${variant}] testimone parziale ${present.size}/${expected.chapters.length}; non valutato come copertura completa.`)
       continue
@@ -79,7 +83,7 @@ for (const book of books) {
     if (unexpected.length) {
       problems.push(`${book.titolo}: [${variant}] capitoli fuori copertura attesa: ${unexpected.join(', ')}`)
     }
-    if (!missing.length && expected.reason) {
+    if (!missing.length && !unexpected.length && expected.reason) {
       notes.push(`${book.titolo}: [${variant}] copertura intenzionale ${expected.chapters[0]}–${expected.chapters.at(-1)} — ${expected.reason}`)
     }
   }
