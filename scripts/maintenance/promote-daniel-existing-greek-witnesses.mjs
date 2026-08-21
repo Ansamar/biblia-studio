@@ -5,7 +5,6 @@ const commit = process.argv.includes('--commit')
 
 const plans = [
   {sourceId:'testo-daniele-susanna-teodozione-sut-1', chapter:13, tradition:'daniele_teodozione', targetId:'testo-daniele-daniele-teodozione-dan-13'},
-  {sourceId:'testo-daniele-bel-og-bel-1', chapter:14, tradition:'daniele_greco_og', targetId:'testo-daniele-daniele-greco-og-dan-14'},
   {sourceId:'testo-daniele-bel-teodozione-bet-1', chapter:14, tradition:'daniele_teodozione', targetId:'testo-daniele-daniele-teodozione-dan-14'},
 ]
 
@@ -27,12 +26,11 @@ const stripSystem = (doc) => {
 }
 
 const targetMeta = {
-  daniele_greco_og: {edizione:'Testo greco — daniele greco og', testimone:'Old Greek', siglaSorgente:'Dan'},
   daniele_teodozione: {edizione:'Testo greco — daniele teodozione', testimone:'Theodotion', siglaSorgente:'Dat'},
 }
 
 const docs = []
-console.log('\n=== PROMOZIONE TESTIMONI GRECI ESISTENTI · DANIELE ===')
+console.log('\n=== PROMOZIONE TESTIMONI GRECI COMPLETI · DANIELE ===')
 console.log(`Project: ${client.config().projectId}`)
 console.log(`Dataset: ${client.config().dataset}`)
 console.log(`Modalità: ${commit ? 'COMMIT' : 'DRY RUN'}`)
@@ -58,14 +56,14 @@ for (const plan of plans) {
     siglaSorgente:meta.siglaSorgente,
     provenienzaPromozione:{
       sorgenteDocumento:plan.sourceId,
-      metodo:'Promozione interna di testimone greco già presente in production; testo dei versetti invariato.',
+      metodo:'Promozione interna di testimone greco completo già presente in production; testo dei versetti invariato.',
     },
   }
   docs.push(doc)
   console.log(`- ${plan.sourceId} → ${plan.targetId} · Dn ${plan.chapter} · ${plan.tradition} · vv=${src.versetti.length}`)
 }
 
-console.log('\nPiano: 3 nuovi documenti; nessun documento sorgente viene modificato o cancellato.')
+console.log('\nPiano: 2 nuovi documenti Teodozione; nessun documento sorgente viene modificato o cancellato.')
 if (!commit) {
   console.log('Nessuna mutazione eseguita. Aggiungere -- --commit per scrivere.')
   process.exit(0)
@@ -78,5 +76,5 @@ console.log(`\n✓ Scritti ${docs.length} documenti promossi.`)
 console.log(`Transaction: ${res.transactionId || 'n/d'}`)
 
 const verify = await client.fetch(`*[_id in $ids]{_id,numero,tradizione,"verseCount":count(versetti)}|order(numero asc, tradizione asc)`, {ids:plans.map(p=>p.targetId)})
-if (verify.length !== 3) throw new Error(`Verifica fallita: attesi 3 target, trovati ${verify.length}`)
+if (verify.length !== 2) throw new Error(`Verifica fallita: attesi 2 target, trovati ${verify.length}`)
 for (const d of verify) console.log(`- ${d._id} · cap ${d.numero} · ${d.tradizione} · vv=${d.verseCount}`)
