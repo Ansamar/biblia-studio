@@ -13,27 +13,17 @@ const targets = [
 ]
 
 const bookRefs = [...new Set(targets.map(t => t.bookRef))]
-const result = await client.fetch(`{
-  "books": *[_id in $bookRefs]{_id,titolo,capitoli},
-  "texts": *[_type == "testoBiblicoCapitolo" && libro._ref in $bookRefs]{
-    _id, numero, lingua, tradizione, edizione,
-    "verseCount": count(versetti)
-  }
-}`, {bookRefs})
+const bookDocs = await client.fetch(`*[_id in $bookRefs]{_id,titolo,capitoli}`, {bookRefs})
+const books = new Map(bookDocs.map(b => [b._id,b]))
 
-const books = new Map(result.books.map(b => [b._id,b]))
-const byBook = new Map()
-for (const t of result.texts) {
-  const bookRef = bookRefs.find(ref => t._id.startsWith('testo-') ? false : false)
-}
-
-// Re-fetch grouped by book because _id naming is not reliable enough to infer the reference.
 for (const target of targets) {
   const book = books.get(target.bookRef)
+  if (!book) throw new Error(`Libro ${target.bookRef} non trovato.`)
+
   const docs = await client.fetch(`*[_type == "testoBiblicoCapitolo" && libro._ref == $bookRef]{_id,numero,lingua,tradizione,edizione,"verseCount":count(versetti)}|order(numero asc)`, {bookRef: target.bookRef})
   const selected = docs.filter(d => d.lingua === target.lingua && d.tradizione === target.tradizione)
   const present = [...new Set(selected.map(d => d.numero).filter(Number.isFinite))].sort((a,b)=>a-b)
-  const canonicalMax = book?.capitoli || 0
+  const canonicalMax = book.capitoli || 0
   const missingCanonical = []
   for (let n=1;n<=canonicalMax;n++) if (!present.includes(n)) missingCanonical.push(n)
 
